@@ -69,7 +69,7 @@ const LeaveRequest = () => {
 
   const fetchAllLeaveType = async () => {
     try {
-      const response = await axios.get("http://localhost:3000/allLeaveType", {
+      const response = await axios.get("http://localhost:3000/all-leave", {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -102,14 +102,14 @@ const LeaveRequest = () => {
       return;
     }
     const response = await axios.post(
-      "http://localhost:3000/leaveRequest",
+      "http://localhost:3000/leave-request-create",
       {
         leave_id: selectedLeaveType.id,
         employee_id: JSON.parse(localStorage.getItem("Employee")).id,
         reason: leaveReason,
         start_date: startDate,
         end_date: endDate,
-        is_sick_leave: selectedLeaveType.name === "Sick Leave",
+        manager_id: JSON.parse(localStorage.getItem("Employee")).managerId,
       },
       {
         headers: {
@@ -206,6 +206,14 @@ const LeaveRequest = () => {
                     transition: "all 0.2s ease",
                   },
                 }}
+                disabled={(date) => {
+                  const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  const isPastDate = date < today;
+
+                  return isWeekend || isPastDate;
+                }}
               />
             </div>
           )}
@@ -230,6 +238,16 @@ const LeaveRequest = () => {
                   style={{
                     border: `1px solid ${colors.border}`,
                     color: colors.text,
+                  }}
+                  filterDate={(date) => {
+                    const isWeekend =
+                      date.getDay() === 0 || date.getDay() === 6;
+
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const isPastDate = date < today;
+
+                    return !isWeekend && !isPastDate;
                   }}
                 />
                 <FaCalendarAlt
@@ -259,6 +277,16 @@ const LeaveRequest = () => {
                   style={{
                     border: `1px solid ${colors.border}`,
                     color: colors.text,
+                  }}
+                  filterDate={(date) => {
+                    const isWeekend =
+                      date.getDay() === 0 || date.getDay() === 6;
+
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const isPastDate = date < today;
+
+                    return !isWeekend && !isPastDate;
                   }}
                 />
                 <FaCalendarAlt

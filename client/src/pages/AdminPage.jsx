@@ -7,6 +7,8 @@ import AddPeople from "../components/AddPeople";
 import AdminLeaveLogs from "../components/AdminLeaveLogs";
 import LeaveLogs from "../components/LeaveLogs";
 import RequestedLeaveLogAdmin from "../components/RequestedLeaveLogAdmin";
+import EmployeeList from "../components/EmployeeList";
+import LeaveCalendar from "../components/LeaveCalender";
 
 const AdminPage = ({ arr, setSelectedValue, selectedValue }) => {
   const [token, setToken] = useState(localStorage.getItem("Token"));
@@ -25,11 +27,11 @@ const AdminPage = ({ arr, setSelectedValue, selectedValue }) => {
           <LeaveLogs />
         </div>
       )}
-      {strLowerCase(selectedValue) === "requested leave" && (
+      {strLowerCase(selectedValue) === "approve leave" && (
         <div className="p-4 w-full overflow-hidden">
           <div className="flex flex-row space-x-2">
             <p
-              className={`px-4 py-2 rounded-full cursor-pointer transition-all duration-300 text-sm font-medium 
+              className={`px-4 py-2 rounded-full cursor-pointer transition-all duration-300 text-sm font-medium
       ${
         viewMode === "pending"
           ? "bg-blue-600 text-white shadow-md"
@@ -40,7 +42,7 @@ const AdminPage = ({ arr, setSelectedValue, selectedValue }) => {
               Pending Request
             </p>
             <p
-              className={`px-4 py-2 rounded-full cursor-pointer transition-all duration-300 text-sm font-medium 
+              className={`px-4 py-2 rounded-full cursor-pointer transition-all duration-300 text-sm font-medium
       ${
         viewMode === "history"
           ? "bg-blue-600 text-white shadow-md"
@@ -68,7 +70,22 @@ const AdminPage = ({ arr, setSelectedValue, selectedValue }) => {
           <LeaveRequest />
         </div>
       )}
+
+      {strLowerCase(selectedValue) === "employee" && (
+        <div className="p-4 w-full overflow-hidden">
+          <EmployeeList />
+        </div>
+      )}
+
+      {strLowerCase(selectedValue) === "calendar" && (
+        <div className="p-4 w-full overflow-hidden">
+          <LeaveCalendar />
+        </div>
+      )}
     </div>
+    // <div className="p-4">
+    //   <LeaveCalendar />
+    // </div>
   );
 };
 

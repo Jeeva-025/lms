@@ -4,13 +4,18 @@ import axios from "axios";
 import { toast } from "react-toastify";
 
 const AddPeople = () => {
+  const [designations, setDesignation] = useState([]);
+  const [hr, setHR] = useState([]);
+  const [manager, setManager] = useState([]);
+  const [selectedDesignation, setSelecetdDesignation] = useState("");
+  const [director, setDirector] = useState([]);
+
   const roles = {
     hr: "HR",
     manager: "Manager",
     director: "Director",
   };
 
-  const types = ["Admin", "Member"];
   const [showPassword, setShowPassword] = useState(false);
 
   const [showDropDown, setShowDropDown] = useState({
@@ -18,6 +23,7 @@ const AddPeople = () => {
     manager: false,
     director: false,
     type: false,
+    designation: false,
   });
 
   const [data, setData] = useState({
@@ -32,21 +38,14 @@ const AddPeople = () => {
     password: "",
   });
 
-  const [hr, setHR] = useState([]);
-  const [manager, setManager] = useState([]);
-  const [director, setDirector] = useState([]);
-
   const verify = () => {
     if (
       !data.email ||
       !data.firstName ||
       !data.lastName ||
       !data.designation ||
-      !data.hr ||
       !data.manager ||
-      !data.director ||
-      !data.password ||
-      !data.type
+      !data.password
     ) {
       toast.warning("Please fill all details", {
         position: "top-center",
@@ -64,33 +63,29 @@ const AddPeople = () => {
 
   const fetchData = async () => {
     try {
-      const arr = Object.values(roles);
-      for (const each of arr) {
-        const response = await axios.get(
-          `http://localhost:3000/employee/people?name=${each}`,
+      const response = await axios.get(
+        "http://localhost:3000/employee-type/all",
 
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("Token")}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        switch (each) {
-          case roles.hr:
-            setHR(response.data);
-            break;
-          case roles.manager:
-            setManager(response.data);
-            break;
-          case roles.director:
-            setDirector(response.data);
-            break;
-          default:
-            console.warn("Unexpected role:", each);
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("Token")}`,
+            "Content-Type": "application/json",
+          },
         }
-      }
+      );
+      const { data } = await axios.get(
+        "http://localhost:3000/senior-employee",
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("Token")}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      console.log(response?.data);
+      console.log(data);
+      setManager(data);
+      setDesignation(response?.data);
     } catch (err) {
       console.error(err);
       toast.error("Failed to fetch employee data", {
@@ -101,19 +96,23 @@ const AddPeople = () => {
   };
 
   const handleSubmit = async () => {
+    console.log({
+      name: `${data.firstName} ${data.lastName}`,
+      emp_type_id: data.designation.employeeTypeId,
+      manager_id: data.manager.employeeId,
+      email: data.email,
+      password: data.password,
+    });
     try {
       if (verify()) {
         const response = await axios.post(
-          "http://localhost:3000/employee/create",
+          "http://localhost:3000/employee-create",
           {
             name: `${data.firstName} ${data.lastName}`,
-            designation: data.designation,
-            hr_id: data.hr.employee_id,
-            manager_id: data.manager.employee_id,
-            director_id: data.director.employee_id,
+            emp_type_id: data.designation.employeeTypeId,
+            manager_id: data.manager.employeeId,
             email: data.email,
             password: data.password,
-            type: data.type,
           },
           {
             headers: {
@@ -204,21 +203,74 @@ const AddPeople = () => {
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 relative">
               <label className="block text-gray-700 font-medium">
                 Designation
               </label>
-              <input
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all bg-gray-50 hover:bg-white"
-                value={data.designation}
-                onChange={(e) =>
-                  setData((prev) => ({ ...prev, designation: e.target.value }))
+              <div
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg cursor-pointer flex justify-between items-center bg-gray-50 hover:bg-white transition-all"
+                onClick={() =>
+                  setShowDropDown((prev) => ({
+                    ...prev,
+                    designation: !showDropDown.designation,
+                  }))
                 }
-                placeholder="Enter designation"
-              />
+              >
+                <span
+                  className={
+                    data.designation ? "text-gray-800" : "text-gray-400"
+                  }
+                >
+                  {data.designation
+                    ? data.designation.name
+                    : "Select Designation"}
+                </span>
+                <svg
+                  className={`w-5 h-5 transition-transform text-gray-500 ${
+                    showDropDown.designation ? "rotate-180" : ""
+                  }`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </div>
+
+              {showDropDown.designation && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg">
+                  {designations.map((designation, index) => (
+                    <div
+                      key={designation.employeeId}
+                      className={`px-4 py-2 hover:bg-blue-50 cursor-pointer transition-colors ${
+                        index === designations.length - 1
+                          ? ""
+                          : "border-b border-gray-100"
+                      }`}
+                      onClick={() => {
+                        setData((prev) => ({
+                          ...prev,
+                          designation: designation,
+                        }));
+                        setShowDropDown((prev) => ({
+                          ...prev,
+                          designation: false,
+                        }));
+                      }}
+                    >
+                      {designation.name}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
-            <div className="space-y-2 relative">
+            {/* <div className="space-y-2 relative">
               <label className="block text-gray-700 font-medium">Type</label>
               <div
                 className="w-full px-4 py-2 border border-gray-200 rounded-lg cursor-pointer flex justify-between items-center bg-gray-50 hover:bg-white transition-all"
@@ -269,9 +321,9 @@ const AddPeople = () => {
                   ))}
                 </div>
               )}
-            </div>
+            </div> */}
 
-            <div className="space-y-2 relative">
+            {/* <div className="space-y-2 relative">
               <label className="block text-gray-700 font-medium">HR</label>
               <div
                 className="w-full px-4 py-2 border border-gray-200 rounded-lg cursor-pointer  flex justify-between items-center bg-gray-50 hover:bg-white transition-all"
@@ -319,7 +371,7 @@ const AddPeople = () => {
                   ))}
                 </div>
               )}
-            </div>
+            </div> */}
 
             <div className="space-y-2 relative">
               <label className="block text-gray-700 font-medium">Manager</label>
@@ -372,14 +424,14 @@ const AddPeople = () => {
                         }));
                       }}
                     >
-                      {each.name}
+                      {each.name} ({each.designation})
                     </div>
                   ))}
                 </div>
               )}
             </div>
 
-            <div className="space-y-2 relative">
+            {/* <div className="space-y-2 relative">
               <label className="block text-gray-700 font-medium">
                 Director
               </label>
@@ -437,7 +489,7 @@ const AddPeople = () => {
                   ))}
                 </div>
               )}
-            </div>
+            </div> */}
 
             <div className="space-y-2">
               <label className="block text-gray-700 font-medium">Email</label>

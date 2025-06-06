@@ -4,6 +4,7 @@ import LeaveDetailsCards from "../components/LeaveDetailsCards";
 import LeaveRequest from "../components/LeaveRequest";
 import LeaveLogs from "../components/LeaveLogs";
 import { useEffect } from "react";
+import LeaveCalendar from "../components/LeaveCalender";
 
 const MemberPage = ({ arr, setSelectedValue, selectedValue }) => {
   const [token, setToken] = useState(localStorage.getItem("Token"));
@@ -23,6 +24,11 @@ const MemberPage = ({ arr, setSelectedValue, selectedValue }) => {
       {strLowerCase(selectedValue) === "request leave" && (
         <div className="p-4 w-full overflow-hidden">
           <LeaveRequest />
+        </div>
+      )}
+      {strLowerCase(selectedValue) === "calendar" && (
+        <div className="p-4 w-full overflow-hidden">
+          <LeaveCalendar />
         </div>
       )}
     </div>

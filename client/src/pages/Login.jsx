@@ -34,7 +34,7 @@ const Login = ({ setToken, setSelectedValue }) => {
       console.log(password);
       if (verification()) {
         const response = await axios.post(
-          "http://localhost:3000/login",
+          "http://localhost:3000/employee-login",
           {
             email,
             password,

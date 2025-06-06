@@ -13,7 +13,7 @@ const LeaveLogs = () => {
     leaveType: "",
     startDate: null,
     endDate: null,
-    status: "",
+    approvalStatus: "",
   });
   const [selectedLeave, setSelectedLeave] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -72,10 +72,11 @@ const LeaveLogs = () => {
   };
 
   const fetchAllLeaveLogs = async () => {
+    const employeeId = JSON.parse(localStorage.getItem("Employee")).id;
     try {
-      const response = await axios.post(
-        "http://localhost:3000/fetchEmployeesLeaveHistory",
-        { employee_id: JSON.parse(localStorage.getItem("Employee")).id },
+      const response = await axios.get(
+        `http://localhost:3000/all-employeee-leave-request/${employeeId}`,
+
         {
           headers: {
             "Content-Type": "application/json",
@@ -187,7 +188,7 @@ const LeaveLogs = () => {
                       className="hover:bg-gray-50 transition-colors"
                     >
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {row.leaveType}
+                        {row.leaveName}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {row.startDate.split("-").join(".")}
@@ -198,10 +199,10 @@ const LeaveLogs = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
                           className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusStyles(
-                            row.status
+                            row.approvalStatus
                           )}`}
                         >
-                          {row.status}
+                          {row.approvalStatus}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -234,7 +235,7 @@ const LeaveLogs = () => {
                               >
                                 View Details
                               </button>
-                              {row.status.trim().toLowerCase() ===
+                              {row.approvalStatus.trim().toLowerCase() ===
                                 "pending" && (
                                 <button
                                   className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
@@ -300,10 +301,10 @@ const LeaveLogs = () => {
                       <p className="text-sm text-gray-500">Status</p>
                       <span
                         className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusStyles(
-                          selectedLeave.status
+                          selectedLeave.approvalStatus
                         )}`}
                       >
-                        {selectedLeave.status}
+                        {selectedLeave.approvalStatus}
                       </span>
                     </div>
                     <div>
@@ -362,8 +363,15 @@ const LeaveLogs = () => {
           )}
         </>
       ) : (
-        <div className="text-center text-gray-500 mt-4 text-lg font-medium">
-          No Leave Logs Found
+        <div className="flex flex-col items-center justify-center mt-10 text-gray-500">
+          <img
+            src="https://cdn-icons-png.flaticon.com/512/4076/4076549.png"
+            alt="No data"
+            className="w-32 h-32 mb-4 opacity-70"
+          />
+          <div className="text-center text-lg font-medium">
+            No Leave Logs Found
+          </div>
         </div>
       )}
     </div>

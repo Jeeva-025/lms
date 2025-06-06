@@ -1,6 +1,17 @@
 const { EntitySchema } = require("typeorm");
 const employee = require("../../routes/employee");
 
+const status = {
+  Active: 200,
+  Inactive: 400,
+};
+const approvalStatus = {
+  Approved: 0,
+  Rejected: 1,
+  Pending: 2,
+  Cancelled: 3,
+};
+
 const LeaveRequest = new EntitySchema({
   name: "LeaveRequest",
   tableName: "leave_requests",
@@ -10,7 +21,7 @@ const LeaveRequest = new EntitySchema({
       primary: true,
       generated: true,
     },
-    leave_id: {
+    leave_type_id: {
       type: "int",
       nullable: false,
     },
@@ -19,7 +30,7 @@ const LeaveRequest = new EntitySchema({
       nullable: false,
     },
     reason: {
-      type: "varchar",
+      type: "text",
       nullable: false,
     },
     start_date: {
@@ -30,28 +41,28 @@ const LeaveRequest = new EntitySchema({
       type: "date",
       nullable: false,
     },
-    is_sick_leave: {
-      type: "boolean",
-      nullable: false,
-      default: false,
-    },
     approval_status: {
-      type: "varchar",
-      nullable: false,
-      default: "PENDING",
+      type: "enum",
+      enum: Object.values(approvalStatus),
+      default: approvalStatus.Pending,
     },
     status: {
-      type: "varchar",
-      nullable: false,
-      default: "ACTIVE",
+      type: "enum",
+      enum: Object.values(status),
+      default: status.Active,
     },
     no_of_approval_need: {
       type: "int",
-      nullable: true,
+      nullable: false,
     },
     no_of_approval_permitted: {
       type: "int",
-      nullable: true,
+      nullable: false,
+    },
+    requested_at: {
+      type: "datetime",
+      default: () => "CURRENT_TIMESTAMP",
+      nullable: false,
     },
   },
   relations: {
@@ -60,7 +71,7 @@ const LeaveRequest = new EntitySchema({
       type: "many-to-one",
       joinColumn: {
         name: "employee_id",
-        referencedColumnName: "employee_id",
+        referencedColumnName: "id",
       },
       nullable: false,
       onDelete: "RESTRICT",
@@ -69,10 +80,16 @@ const LeaveRequest = new EntitySchema({
       target: "LeaveType",
       type: "many-to-one",
       joinColumn: {
-        name: "leave_id",
+        name: "leave_type_id",
+        referencedColumnName: "id",
       },
       nullable: false,
       onDelete: "RESTRICT",
+    },
+    approvalFlow: {
+      target: "ApprovalFlow",
+      type: "one-to-many",
+      inverseSide: "leaveRequest",
     },
   },
 });

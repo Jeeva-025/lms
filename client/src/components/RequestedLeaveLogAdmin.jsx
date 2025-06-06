@@ -13,12 +13,11 @@ const RequestedLeaveLogAdmin = () => {
     return str.trim().toLowerCase();
   };
 
-  const fetchLeaveHistory = async (key, value) => {
+  const fetchLeaveHistory = async (id) => {
     try {
       setLoading(true);
-      const response = await axios.post(
-        "http://localhost:3000/fetchLeaveHistoryToAdmin",
-        { [key]: value },
+      const response = await axios.get(
+        `http://localhost:3000/leave-request-history/${id}`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("Token")}`,
@@ -26,6 +25,7 @@ const RequestedLeaveLogAdmin = () => {
           },
         }
       );
+      console.log(response.data);
       setLeaveRequests(response.data);
       setLoading(false);
     } catch (err) {
@@ -37,19 +37,8 @@ const RequestedLeaveLogAdmin = () => {
 
   useEffect(() => {
     const employee = JSON.parse(localStorage.getItem("Employee"));
-    const designation = employee.designation;
     const id = employee.id;
-    switch (strLowerCase(designation)) {
-      case "manager":
-        fetchLeaveHistory("manager_id", id);
-        break;
-      case "hr":
-        fetchLeaveHistory("hr_id", id);
-        break;
-      default:
-        fetchLeaveHistory("director_id", id);
-        break;
-    }
+    fetchLeaveHistory(id);
   }, []);
 
   const filteredRequests = leaveRequests.filter((request) => {

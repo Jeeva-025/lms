@@ -1,11 +1,12 @@
 const { EntitySchema } = require("typeorm");
+
 const status = {
   Active: 200,
   Inactive: 400,
 };
-const LeaveType = new EntitySchema({
-  name: "LeaveType",
-  tableName: "leave_types",
+const EmployeeType = new EntitySchema({
+  name: "EmployeeType",
+  tableName: "employee_types",
   columns: {
     id: {
       type: "int",
@@ -27,21 +28,17 @@ const LeaveType = new EntitySchema({
     },
   },
   relations: {
+    employee: {
+      target: "Employee",
+      type: "one-to-many",
+      inverseSide: "employeeType",
+    },
     leavePolicy: {
       target: "LeavePolicy",
       type: "one-to-many",
-      inverseSide: "leaveType",
-    },
-    leaveRequest: {
-      target: "LeaveRequest",
-      type: "one-to-many",
-      inverseSide: "leaveType",
-    },
-    leaveBalance: {
-      target: "LeaveBalance",
-      type: "one-to-many",
-      inverseSide: "leaveType",
+      inverseSide: "employeeType",
     },
   },
 });
-module.exports = LeaveType;
+
+module.exports = EmployeeType;

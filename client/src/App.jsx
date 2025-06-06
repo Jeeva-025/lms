@@ -7,25 +7,43 @@ import MemberPage from "./pages/MemberPage";
 import MemberNavBar from "./components/MemberNavBar";
 import AdminNavBar from "./components/AdminNavBar";
 import AdminPage from "./pages/AdminPage";
+import { toLowerTrim } from "./utils/helper";
 import "./App.css";
 function App() {
+  let type = "";
   const emp = JSON.parse(localStorage.getItem("Employee"));
-  const typ = emp?.type ? emp.type.trim().toLowerCase() : null;
+  if (
+    toLowerTrim(emp?.designation)?.includes(toLowerTrim("senior")) ||
+    toLowerTrim(emp?.designation)?.includes(toLowerTrim("hr")) ||
+    toLowerTrim(emp?.designation)?.includes(toLowerTrim("director"))
+  ) {
+    type = "admin";
+  } else {
+    type = "member";
+  }
+
   const tok = localStorage.getItem("Token") ?? null;
   const [token, setToken] = useState(tok);
 
   const [selectedValue, setSelectedValue] = useState("Dashboard");
 
   let arr;
-  if (typ) {
-    if (typ === "member") {
-      arr = ["Dashboard", "Request Leave"];
-    } else if (emp.designation.trim().toLowerCase() === "hr") {
-      arr = ["Dashboard", "Requested Leave", "Request Leave", "Add People"];
-    } else if (emp.designation.trim().toLowerCase() === "manager") {
-      arr = ["Dashboard", "Requested Leave", "Request Leave"];
+  if (type) {
+    if (type === "member") {
+      arr = ["Dashboard", "Request Leave", "Calendar"];
+    } else if (toLowerTrim(emp?.designation)?.includes("hr")) {
+      arr = [
+        "Dashboard",
+        "Approve Leave",
+        "Request Leave",
+        "Add People",
+        "Employee",
+        "Calendar",
+      ];
+    } else if (toLowerTrim(emp?.designation)?.includes("senior")) {
+      arr = ["Dashboard", "Approve Leave", "Request Leave", "Calendar"];
     } else {
-      arr = ["Dashboard", "Requested Leave"];
+      arr = ["Dashboard", "Approve Leave"];
     }
   }
 
@@ -49,7 +67,7 @@ function App() {
               path="/"
               element={
                 tok ? (
-                  typ === "admin" ? (
+                  type === "admin" ? (
                     <AdminPage
                       arr={arr}
                       setSelectedValue={setSelectedValue}

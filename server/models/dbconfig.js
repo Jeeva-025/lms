@@ -1,5 +1,7 @@
 require("dotenv").config();
 const { DataSource } = require("typeorm");
+const LeaveRemaining = require("./entities/leaveBalance");
+const Employee = require("./entities/employee");
 
 const AppDataSource = new DataSource({
   type: process.env.DB_TYPE,
@@ -12,12 +14,18 @@ const AppDataSource = new DataSource({
   entities: [__dirname + "/entities/*.js"],
 });
 
-AppDataSource.initialize()
-  .then(() => {
+const initializeDatabase = async () => {
+  try {
+    await AppDataSource.initialize();
     console.log("Database connection established successfully");
-  })
-  .catch((err) => {
-    console.log("Database connection error  ", err);
-  });
+    return AppDataSource;
+  } catch (err) {
+    console.error("Database connection error", err);
+    throw err;
+  }
+};
 
-module.exports = AppDataSource;
+module.exports = {
+  AppDataSource,
+  initializeDatabase,
+};

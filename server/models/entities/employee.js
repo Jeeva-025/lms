@@ -1,11 +1,14 @@
 const { EntitySchema } = require("typeorm");
-const LeaveRequest = require("../entities/leaveRequest");
 
+const status = {
+  Active: 200,
+  Inactive: 400,
+};
 const Employee = new EntitySchema({
   name: "Employee",
   tableName: "employees",
   columns: {
-    employee_id: {
+    id: {
       type: "int",
       unique: true,
       primary: true,
@@ -15,45 +18,59 @@ const Employee = new EntitySchema({
       type: "varchar",
       nullable: false,
     },
-    designation: {
-      type: "varchar",
-      nullable: false,
-    },
-    employment_status: {
-      type: "varchar",
-      nullable: false,
-      default: "ACTIVE",
-    },
-    hr_id: {
-      type: "int",
-      nullable: true,
-    },
-    manager_id: {
-      type: "int",
-      nullable: true,
-    },
-    director_id: {
-      type: "int",
-      nullable: true,
-    },
     email: {
       type: "varchar",
       unique: true,
       length: 100,
       nullable: false,
     },
+    emp_type_id: {
+      type: "int",
+      nullable: false,
+    },
+
+    manager_id: {
+      type: "int",
+      nullable: true,
+    },
     password: {
       type: "varchar",
       nullable: false,
     },
-    type: {
-      type: "varchar",
+    created_at: {
+      type: "timestamp",
+      default: () => "CURRENT_TIMESTAMP",
       nullable: false,
+    },
+    status: {
+      type: "enum",
+      enum: Object.values(status),
+      default: status.Active,
     },
   },
   relations: {
     leaveRequest: {
       target: "LeaveRequest",
+      type: "one-to-many",
+      inverseSide: "employee",
+    },
+    employeeType: {
+      target: "EmployeeType",
+      type: "many-to-one",
+      joinColumn: {
+        name: "emp_type_id",
+        referencedColumnName: "id",
+      },
+      nullable: false,
+      onDelete: "RESTRICT",
+    },
+    approvalFlow: {
+      target: "ApprovalFlow",
+      type: "one-to-many",
+      inverseSide: "employee",
+    },
+    leaveBalance: {
+      target: "LeaveBalance",
       type: "one-to-many",
       inverseSide: "employee",
     },

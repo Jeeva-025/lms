@@ -1,5 +1,4 @@
 import React from "react";
-import { MdEventAvailable } from "react-icons/md";
 import { FaRegCircleCheck } from "react-icons/fa6";
 import { FaClockRotateLeft } from "react-icons/fa6";
 import { IoCloseCircleOutline } from "react-icons/io5";
@@ -7,21 +6,28 @@ import { FaUser } from "react-icons/fa";
 import { toast } from "react-toastify";
 import axios from "axios";
 import { useState, useEffect } from "react";
-
+import {
+  MdMedicalServices,
+  MdBeachAccess,
+  MdEventAvailable,
+} from "react-icons/md";
+import { BsCalendar2CheckFill } from "react-icons/bs";
 const LeaveDetailsCards = () => {
   const [leaveRemData, setLeaveRemData] = useState({
     availableLeave: 0,
     approved: 0,
     pending: 0,
     rejected: 0,
+    availableCasual: 0,
+    availableEarned: 0,
+    availableSick: 0,
   });
 
   const fetchReaminingLeave = async () => {
     try {
       const employeeId = JSON.parse(localStorage.getItem("Employee")).id;
       const response = await axios.get(
-        `http://localhost:3000/employee/leaves/${employeeId}`,
-
+        `http://localhost:3000/employee-leave/${employeeId}`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("Token")}`,
@@ -29,44 +35,43 @@ const LeaveDetailsCards = () => {
           },
         }
       );
-      const response1 = await axios.post(
-        "http://localhost:3000/employee/noof/requestbystatus",
-        {
-          employee_id: JSON.parse(localStorage.getItem("Employee")).id,
-          approval_status: "PENDING",
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("Token")}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      const response2 = await axios.post(
-        "http://localhost:3000/employee/noof/requestbystatus",
-        {
-          employee_id: JSON.parse(localStorage.getItem("Employee")).id,
-          approval_status: "REJECTED",
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("Token")}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      console.log(response);
+      // const response1 = await axios.post(
+      //   "http://localhost:3000/employee/noof/requestbystatus",
+      //   {
+      //     employee_id: JSON.parse(localStorage.getItem("Employee")).id,
+      //     approval_status: "PENDING",
+      //   },
+      //   {
+      //     headers: {
+      //       Authorization: `Bearer ${localStorage.getItem("Token")}`,
+      //       "Content-Type": "application/json",
+      //     },
+      //   }
+      // );
+      // const response2 = await axios.post(
+      //   "http://localhost:3000/employee/noof/requestbystatus",
+      //   {
+      //     employee_id: JSON.parse(localStorage.getItem("Employee")).id,
+      //     approval_status: "REJECTED",
+      //   },
+      //   {
+      //     headers: {
+      //       Authorization: `Bearer ${localStorage.getItem("Token")}`,
+      //       "Content-Type": "application/json",
+      //     },
+      //   }
+      // );
 
       setLeaveRemData((prev) => ({
         ...prev,
-        availableLeave:
-          response?.data?.data?.total_leaves -
-          response?.data?.data?.no_of_leave_taken,
-        approved:
-          response?.data?.data?.no_of_casual_leave +
-          response?.data?.data?.no_of_earned_leave +
-          response?.data?.data?.no_of_sick_leave,
-        pending: response1.data.data,
-        rejected: response2.data.data,
+        availableLeave: response?.data?.data?.availableLeave,
+        approved: 0,
+        pending: 0,
+        rejected: 0,
+        availableCasual: response?.data?.data?.casualLeaveAvailable,
+        availableEarned: response?.data?.data?.earnedLeaveAvailable,
+        availableSick: response?.data?.data?.sickLeaveAvailable,
       }));
     } catch (err) {
       console.log(err);
@@ -89,18 +94,21 @@ const LeaveDetailsCards = () => {
       console.log(leaveRemData);
     }
   }, [leaveRemData]);
+  console.log(leaveRemData);
   return (
     <div className="flex space-x-4 h-auto items-center px-2 w-full overflow-auto no-scrollbar py-2">
       {/* Available Leaves */}
       <div
-        className="flex flex-col items-center justify-center space-y-1 rounded-xl p-4 w-[250px] h-[110px] shadow-lg 
+        className="flex flex-col items-center justify-center space-y-1 rounded-xl p-4 min-w-[220px] h-[110px] shadow-lg 
           bg-gradient-to-br from-green-50 to-green-100 border border-green-100 hover:shadow-green-100/50 hover:shadow-md transition-all"
       >
         <div className="flex space-x-3 items-center w-full">
           <div className="p-2 rounded-full bg-green-200/50">
             <MdEventAvailable size={32} className="text-green-600" />
           </div>
-          <p className="text-lg font-medium text-gray-700">Available Leaves</p>
+          <p className="text-lg font-medium text-gray-700 whitespace-nowrap">
+            Available Leaves
+          </p>
         </div>
         <p className="text-3xl font-bold text-gray-800 self-start ml-4">
           {leaveRemData.availableLeave}
@@ -109,7 +117,7 @@ const LeaveDetailsCards = () => {
 
       {/* Approved */}
       <div
-        className="flex flex-col items-center justify-center space-y-1 rounded-xl p-4 w-[250px] h-[110px] shadow-lg 
+        className="flex flex-col items-center justify-center space-y-1 rounded-xl p-4 min-w-[220px] h-[110px] shadow-lg 
           bg-gradient-to-br from-teal-50 to-teal-100 border border-teal-100 hover:shadow-teal-100/50 hover:shadow-md transition-all"
       >
         <div className="flex space-x-3 items-center w-full">
@@ -125,7 +133,7 @@ const LeaveDetailsCards = () => {
 
       {/* Pending */}
       <div
-        className="flex flex-col items-center justify-center space-y-1 rounded-xl p-4 w-[250px] h-[110px] shadow-lg 
+        className="flex flex-col items-center justify-center space-y-1 rounded-xl p-4 min-w-[220px] h-[110px] shadow-lg 
           bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-100 hover:shadow-amber-100/50 hover:shadow-md transition-all"
       >
         <div className="flex space-x-3 items-center w-full">
@@ -142,7 +150,7 @@ const LeaveDetailsCards = () => {
 
       {/* Rejected */}
       <div
-        className="flex flex-col items-center justify-center space-y-1 rounded-xl p-4 w-[250px] h-[110px] shadow-lg 
+        className="flex flex-col items-center justify-center space-y-1 rounded-xl p-4 min-w-[220px] h-[110px] shadow-lg 
           bg-gradient-to-br from-pink-50 to-pink-100 border border-pink-100 hover:shadow-pink-100/50 hover:shadow-md transition-all"
       >
         <div className="flex space-x-3 items-center w-full">
@@ -157,7 +165,47 @@ const LeaveDetailsCards = () => {
         </p>
       </div>
 
-      {/* Requested */}
+      <div className="flex flex-col items-center justify-center space-y-1 rounded-xl p-4 w-[250px] h-[110px] shadow-lg bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-100 hover:shadow-purple-100/50 hover:shadow-md transition-all">
+        <div className="flex space-x-3 items-center w-full">
+          <div className="p-2 rounded-full bg-purple-200/50">
+            <BsCalendar2CheckFill size={32} className="text-indigo-600" />
+          </div>
+          <p className="text-md font-medium text-gray-700 whitespace-nowrap">
+            Available Earned Leave
+          </p>
+        </div>
+        <p className="text-3xl font-bold text-gray-800 self-start ml-4">
+          {leaveRemData.availableEarned}
+        </p>
+      </div>
+
+      <div className="flex flex-col items-center justify-center space-y-1 rounded-xl p-4 w-[250px] h-[110px] shadow-lg bg-gradient-to-br from-yellow-50 to-yellow-100 border border-yellow-100 hover:shadow-yellow-100/50 hover:shadow-md transition-all">
+        <div className="flex space-x-3 items-center w-full">
+          <div className="p-2 rounded-full bg-yellow-200/50">
+            <MdBeachAccess size={32} className="text-blue-600" />
+          </div>
+          <p className="text-md font-medium text-gray-700 whitespace-nowrap">
+            Available Casual Leave
+          </p>
+        </div>
+        <p className="text-3xl font-bold text-gray-800 self-start ml-4">
+          {leaveRemData.availableCasual}
+        </p>
+      </div>
+
+      <div className="flex flex-col items-center justify-center space-y-1 rounded-xl p-4 w-[250px] h-[110px] shadow-lg bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-100 hover:shadow-indigo-100/50 hover:shadow-md transition-all">
+        <div className="flex space-x-3 items-center w-full">
+          <div className="p-2 rounded-full bg-indigo-200/50">
+            <MdMedicalServices size={32} className="text-red-600" />
+          </div>
+          <p className="text-md font-medium text-gray-700 whitespace-nowrap">
+            Available Sick Leave
+          </p>
+        </div>
+        <p className="text-3xl font-bold text-gray-800 self-start ml-4">
+          {leaveRemData.availableSick}
+        </p>
+      </div>
     </div>
   );
 };
