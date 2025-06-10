@@ -1,133 +1,6 @@
 const employeeController = require("../controllers/Employee");
 const validate = require("../validate/employeeTypeValidation");
 const employeeValidate = require("../validate/employeeValidation");
-// const LeaveRequestController = require("../controllers/LeaveRequest");
-// const LeaveTypeController = require("../controllers/LeaveType");
-// const LeaveremainingController = require("../controllers/LeaveRemaining");
-// const LeaveRemaining = require("../models/entities/leaveBalance");
-
-// const employeeCreate = {
-//   method: "POST",
-//   path: "/employee/create",
-//   handler: employeeController.createEmployee,
-// };
-
-// const allPeople = {
-//   method: "GET",
-//   path: "/employee/people",
-//   handler: employeeController.fetchAllPeople,
-// };
-
-// const employeeLogin = {
-//   method: "POST",
-//   path: "/login",
-//   options: {
-//     auth: false,
-//   },
-//   handler: employeeController.loginEmployee,
-// };
-
-// const createLeaveRequest = {
-//   method: "POST",
-//   path: "/leaveRequest",
-//   handler: LeaveRequestController.createLeaveRequest,
-// };
-
-// const cancelLeaveRequest = {
-//   method: "PATCH",
-//   path: "/cancelLeave/{id}",
-//   handler: LeaveRequestController.cancelLeaveRequest,
-// };
-// const rejectLeaveRequest = {
-//   method: "PATCH",
-//   path: "/rejectLeave/{id}",
-//   handler: LeaveRequestController.rejectLeaveRequest,
-// };
-
-// const fetchLeaveHistory = {
-//   method: "POST",
-//   path: "/fetchEmployeesLeaveHistory",
-//   handler: LeaveRequestController.fetchEmployeeLeaveHistory,
-// };
-
-// const leaveApproval = {
-//   method: "POST",
-//   path: "/leaveApproval",
-//   handler: LeaveRequestController.approvalOfLeave,
-// };
-// const fetchLeaveType = {
-//   method: "GET",
-//   path: "/allLeaveType",
-//   handler: LeaveTypeController.fetchAllTypeOfLeave,
-// };
-
-// const leaveRemainingForAnEmployee = {
-//   method: "GET",
-//   path: "/employee/leaves/{employee_id}",
-//   handler: LeaveremainingController.fetchLeaveDetailsForEmployee,
-// };
-// const countLeaveRequestByType = {
-//   method: "POST",
-//   path: "/employee/noof/requestbystatus",
-//   handler: LeaveRequestController.fetchNoOfRequestByStatus,
-// };
-
-// const fetchAllRequestToManager = {
-//   method: "GET",
-//   path: "/allrequestedLeavetoManager",
-//   handler: LeaveRequestController.fetchLeaveRequestToManager,
-// };
-// const fetchAllRequestToHr = {
-//   method: "GET",
-//   path: "/allrequestedLeavetoHR",
-//   handler: LeaveRequestController.fetchLeaveRequestToHR,
-// };
-
-// const fetchAllRequestToDirector = {
-//   method: "GET",
-//   path: "/allrequestedLeavetoDirector",
-//   handler: LeaveRequestController.fetchLeaveRequestToDirector,
-// };
-// const fetchLeaveHistoryToAdmin = {
-//   method: "POST",
-//   path: "/fetchLeaveHistoryToAdmin",
-//   handler: LeaveRequestController.fetchLeaveRequestHistory,
-// };
-// const fetchAllPeopleByHrId = {
-//   method: "GET",
-//   path: "/fetchAllPeopleByHrId/{hr_id}",
-//   handler: employeeController.fetchAllPeopleByHrId,
-// };
-// const deleteEmployee = {
-//   method: "PATCH",
-//   path: "/deleteUser/{employee_id}",
-//   handler: employeeController.deleteEmployee,
-// };
-// const updateEmployee = {
-//   method: "POST",
-//   path: "/updateUser",
-//   handler: employeeController.updateEmployee,
-// };
-// module.exports = [
-//   employeeCreate,
-//   employeeLogin,
-//   createLeaveRequest,
-//   cancelLeaveRequest,
-//   rejectLeaveRequest,
-//   fetchLeaveHistory,
-//   leaveApproval,
-//   allPeople,
-//   fetchLeaveType,
-//   leaveRemainingForAnEmployee,
-//   countLeaveRequestByType,
-//   fetchAllRequestToDirector,
-//   fetchAllRequestToManager,
-//   fetchAllRequestToHr,
-//   fetchLeaveHistoryToAdmin,
-//   fetchAllPeopleByHrId,
-//   deleteEmployee,
-//   updateEmployee,
-// ];
 
 const employeeRoute = [
   {
@@ -162,7 +35,43 @@ const employeeRoute = [
     path: "/senior-employee",
     handler: employeeController.fetchSeniorLevelEmployees,
   },
- 
+  {
+    method: "GET",
+    path: "/all-employee",
+    handler: employeeController.fetchAllPeople,
+  },
+  {
+    method: "POST",
+    path: "/update-employee",
+    options: {
+      handler: employeeController.updateEmployee,
+      validate: {
+        payload: employeeValidate.updateEmployee,
+        failAction: (request, h, err) => {
+          return h.response({ message: err.message }).code(400).takeover();
+        },
+      },
+    },
+  },
+
+  {
+    method: "POST",
+    path: "/change-password",
+    handler: employeeController.changePassword,
+  },
+  {
+    method: "PATCH",
+    path: "/employee-destroy",
+    options: {
+      handler: employeeController.deleteEmployee,
+      validate: {
+        payload: employeeValidate.employeeId,
+        failAction: (request, h, err) => {
+          return h.response({ message: err.message }).code(400).takeover();
+        },
+      },
+    },
+  },
 ];
 
 module.exports = employeeRoute;

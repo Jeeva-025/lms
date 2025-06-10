@@ -1,5 +1,5 @@
 const { AppDataSource } = require("../models/dbconfig");
-const { generateRandomNumber } = require("../utils/helper");
+const { generateRandomNumber, hashPassword } = require("../utils/helper");
 const Employee = require("../models/entities/employee");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
@@ -7,20 +7,14 @@ const dotenv = require("dotenv");
 const LeaveRemaining = require("../models/entities/leaveBalance");
 const LeaveRequest = require("../models/entities/leaveRequest");
 const EmployeeType = require("../models/entities/employeeType");
-const LeaveType = require("../models/entities/employeeType");
 const LeavePolicy = require("../models/entities/leavePolicy");
+const { Not, In } = require("typeorm");
+const ApprovalFlow = require("../models/entities/approvalFlow");
+const { status } = require("../utils/constant");
 
 dotenv.config();
 
-const hashPassword = async (password) => {
-  const salt = await bcrypt.genSalt(10);
-  return await bcrypt.hash(password, salt);
-};
 const createEmployee = async (request, h) => {
-  const status = {
-    Active: "200",
-    Inactive: "400",
-  };
   try {
     const { name, email, emp_type_id, manager_id, password } = request.payload;
 
@@ -46,7 +40,7 @@ const createEmployee = async (request, h) => {
     const policies = await leavePolicyRepo.find({
       where: {
         employee_type_id: emp_type_id,
-        status: status.Active,
+        status: status.Active.toString(),
       },
     });
 
@@ -86,27 +80,46 @@ const createEmployee = async (request, h) => {
   }
 };
 
+const changePassword = async (request, h) => {
+  try {
+    const { id, password } = request.payload;
+    const employeeRepo = AppDataSource.getRepository(Employee);
+    const employeeData = await employeeRepo.findOne({ where: { id } });
+    if (!employeeData) {
+      return h.response({ error: "Data not Found" }).code(404);
+    }
+    const hashpass = hashPassword(password);
+    employeeData.password = hashpass;
+    await employeeRepo.save(employeeData);
+    return h
+      .response({ message: "Password has been Changed successfully" })
+      .code(201);
+  } catch (err) {
+    console.log(err);
+    return h.response({ error: "Failed to change Password" }).code(500);
+  }
+};
+
 const loginEmployee = async (request, h) => {
   try {
     const { email, password } = request.payload;
     const employeeRepo = AppDataSource.getRepository(Employee);
 
     const employeeData = await employeeRepo.findOne({
-      where: { email },
+      where: { email, status: status.Active.toString() },
       relations: ["employeeType"],
     });
 
     if (!employeeData) {
-      return h.response({ error: "Invalid email or password" }).code(401);
+      return h.response({ message: "Invalid email or password" }).code(401);
     }
-    console.log(employeeData);
 
     const isPasswordValid = await bcrypt.compare(
       password,
       employeeData.password
     );
     if (!isPasswordValid) {
-      return h.response({ error: "Invalid email or password" }).code(401);
+      return h.response({ message: "Invalid email or password" }).code(401);
     }
     const token = jwt.sign(
       {
@@ -143,55 +156,44 @@ const loginEmployee = async (request, h) => {
 
 const fetchAllPeople = async (request, h) => {
   try {
-    const employeeRepo = AppDataSource.getRepository(Employee);
-    const employeeData = await employeeRepo.find();
-    if (!employeeData) {
-      return h.response({ message: "Data not found" }).code(404);
-    }
-    return h.response(employeeData).code(200);
-  } catch (err) {
-    console.log(err);
-    return h.response({ message: "Failed to fetch Data" }).code(500);
-  }
-};
-// const fetchAllPeople = async (request, h) => {
-//   try {
-//     const { name } = request.query;
-//     const employeeRepo = AppDataSource.getRepository(Employee);
-//     const data = await employeeRepo.find({ where: { designation: name } });
-//     if (!data) return h.response({ message: "Data not found" }).code(404);
+    const employeeTypeRepo = AppDataSource.getRepository(EmployeeType);
 
-//     return h.response(data).code(200);
-//   } catch (err) {
-//     console.log(err);
-//     return h.response({ message: "Failed to fetch Data" }).code(500);
-//   }
-// };
-const fetchAllPeopleByHrId = async (request, h) => {
-  try {
-    const { hr_id } = request.params;
-    const employeeRepo = AppDataSource.getRepository(Employee);
-    const data = await employeeRepo.find({
-      where: { hr_id, employment_status: "ACTIVE" },
+    const employeeTypeData = await employeeTypeRepo.find({
+      where: {
+        name: Not(In(["Hr", "Director"])),
+        status: status.Active.toString(),
+      },
+      relations: ["employee", "employee.manager"],
     });
-    if (!data) return h.response({ message: "Data not found" }).code(404);
-    return h.response(data).code(200);
+
+    if (!employeeTypeData) {
+      return h.response({ message: "Data not Found" }).code(404);
+    }
+
+    const transformed = employeeTypeData.flatMap((designationObj) => {
+      return designationObj.employee
+        .filter((emp) => emp.status === status.Active)
+        .map((emp) => ({
+          id: emp.id,
+          name: emp.name,
+          email: emp.email,
+          designation: designationObj.name,
+          empTypeId: designationObj.id,
+          manager_name: emp.manager ? emp.manager.name : null,
+          manager_id: emp.manager ? emp.manager.id : null,
+        }));
+    });
+
+    return h.response(transformed).code(200);
   } catch (err) {
     console.log(err);
-    return h.response({ message: "Failed to fetch Data" }).code(500);
+    return h.response({ message: "Internal Server Error" }).code(500);
   }
 };
 const updateEmployee = async (request, h) => {
   try {
-    const {
-      employee_id,
-      name,
-      email,
-      designation,
-      hr_id,
-      manager_id,
-      director_id,
-    } = request.payload;
+    const { employee_id, name, email, emp_type_id, manager_id } =
+      request.payload;
 
     if (!employee_id) {
       return h.response({ message: "Employee ID is required" }).code(400);
@@ -199,7 +201,7 @@ const updateEmployee = async (request, h) => {
 
     const employeeRepo = AppDataSource.getRepository(Employee);
 
-    const employee = await employeeRepo.findOne({ where: { employee_id } });
+    const employee = await employeeRepo.findOne({ where: { id: employee_id } });
 
     if (!employee) {
       return h.response({ message: "Employee not found" }).code(404);
@@ -207,10 +209,8 @@ const updateEmployee = async (request, h) => {
 
     if (name) employee.name = name;
     if (email) employee.email = email;
-    if (designation) employee.designation = designation;
-    if (hr_id) employee.hr_id = hr_id;
+    if (emp_type_id) employee.emp_type_id = emp_type_id;
     if (manager_id) employee.manager_id = manager_id;
-    if (director_id) employee.director_id = director_id;
 
     await employeeRepo.save(employee);
 
@@ -218,68 +218,85 @@ const updateEmployee = async (request, h) => {
       .response({
         message: "Employee updated successfully",
         data: {
-          employee_id: employee.employee_id,
+          employee_id: employee.id,
           name: employee.name,
           email: employee.email,
+          manager_id: employee.manager_id,
+          designation: employee.emp_type_id,
         },
       })
-      .code(200);
+      .code(201);
   } catch (err) {
     console.error("Error updating employee:", err);
-
-    if (err.name === "QueryFailedError") {
-      return h.response({ message: "Database error occurred" }).code(500);
-    }
-
     return h.response({ message: "Failed to update employee" }).code(500);
   }
 };
 
 const deleteEmployee = async (request, h) => {
   try {
-    const { employee_id } = request.params;
+    const { employee_id } = request.payload;
     if (!employee_id) {
       return h.response({ message: "Employee ID is required" }).code(400);
     }
+
     const employeeRepo = AppDataSource.getRepository(Employee);
     const leaveRemainingRepo = AppDataSource.getRepository(LeaveRemaining);
     const leaveRequestRepo = AppDataSource.getRepository(LeaveRequest);
-    const employeeData = await employeeRepo.findOne({ where: { employee_id } });
+    const approvalFlowRepo = AppDataSource.getRepository(ApprovalFlow);
+
+    const employeeData = await employeeRepo.findOne({
+      where: { id: employee_id },
+    });
     if (!employeeData) {
       return h.response({ message: "Data not found" }).code(404);
     }
+
+    employeeData.status = status.Inactive;
+    await employeeRepo.save(employeeData);
+
     const leaveRequestData = await leaveRequestRepo.find({
       where: { employee_id },
     });
-    employeeData.employment_status = "INACTIVE";
-    await employeeRepo.save(employeeData);
-    if (leaveRequestData.length > 0) {
-      const updatedData = leaveRequestData.map((leave) => {
-        leave.status = "INACTIVE";
-        return leave;
+    const leaveIds = leaveRequestData.map((leave) => leave.id);
+
+    if (leaveIds.length > 0) {
+      const allFlows = await approvalFlowRepo.find({
+        where: { leave_id: In(leaveIds) },
       });
-      await leaveRequestRepo.save(updatedData);
+      allFlows.forEach((flow) => (flow.status = status.Inactive));
+      await approvalFlowRepo.save(allFlows);
+
+      leaveRequestData.forEach((leave) => (leave.status = status.Inactive));
+      await leaveRequestRepo.save(leaveRequestData);
     }
-    const leaveRemainingData = await leaveRemainingRepo.findOne({
+
+    const leaveRemainingData = await leaveRemainingRepo.find({
       where: { employee_id },
     });
-    if (leaveRemainingData) {
-      leaveRemainingData.status = "INACTIVE";
-      await leaveRemainingRepo.save(leaveRemainingData);
-    }
+    leaveRemainingData.forEach((leave) => (leave.status = status.Inactive));
+    await leaveRemainingRepo.save(leaveRemainingData);
+
+    const approvalFlowData = await approvalFlowRepo.find({
+      where: { approver_id: employee_id },
+    });
+    approvalFlowData.forEach((flow) => (flow.status = status.Inactive));
+    await approvalFlowRepo.save(approvalFlowData);
+
     return h.response({ message: "Delete successfully" }).code(200);
   } catch (err) {
     console.log(err);
     return h.response({ message: "Failed to Delete employee" }).code(500);
   }
 };
+
 const fetchSeniorLevelEmployees = async (request, h) => {
   try {
     const employeeRepo = AppDataSource.getRepository(Employee);
     const employeeData = await employeeRepo
       .createQueryBuilder("employee")
       .leftJoinAndSelect("employee.employeeType", "employeeType")
-      .where(`LOWER(employeeType.name) LIKE :senior`)
+      .where("employee.status = :status", { status: status.Active.toString() })
+      .andWhere(`LOWER(employeeType.name) LIKE :senior`)
       .orWhere(`LOWER(employeeType.name) LIKE :hr`)
       .orWhere(`LOWER(employeeType.name) LIKE :director`)
       .setParameters({
@@ -307,8 +324,8 @@ module.exports = {
   createEmployee,
   loginEmployee,
   fetchAllPeople,
-  fetchAllPeopleByHrId,
   updateEmployee,
   deleteEmployee,
   fetchSeniorLevelEmployees,
+  changePassword,
 };

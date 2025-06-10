@@ -74,6 +74,19 @@ const Employee = new EntitySchema({
       type: "one-to-many",
       inverseSide: "employee",
     },
+    manager: {
+      target: "Employee",
+      type: "many-to-one",
+      joinColumn: {
+        name: "manager_id",
+      },
+      inverseSide: "subordinates",
+    },
+    subordinates: {
+      target: "Employee",
+      type: "one-to-many",
+      inverseSide: "manager",
+    },
   },
 });
 module.exports = Employee;

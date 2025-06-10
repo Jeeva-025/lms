@@ -3,46 +3,13 @@ import EmployeeCard from "./EmployeeCard";
 import EditEmployeeModel from "./EditEmployeeModel";
 import axios from "axios";
 import { toast } from "react-toastify";
-import DeleteEmployee from "./DeleteEmployee"; // Add this import
+import DeleteEmployee from "./DeleteEmployee";
+import API from "../utils/API";
 
 const EmployeeList = () => {
-  const [showDeleteModal, setShowDeleteModal] = useState(false); // Add this state
-  const [deletingEmployee, setDeletingEmployee] = useState(null); // Add this state
-  const [employees, setEmployees] = useState([
-    {
-      employee_id: 5177,
-      name: "Vishal Kumar",
-      designation: "Software Developer",
-      employment_status: "ACTIVE",
-      hr_id: 5359,
-      manager_id: 6441,
-      director_id: 7762,
-      email: "vishal@gmail.com",
-      type: "Member",
-    },
-    {
-      employee_id: 5777,
-      name: "Rohan Mehta",
-      designation: "Manager",
-      employment_status: "ACTIVE",
-      hr_id: 5359,
-      manager_id: null,
-      director_id: 9876,
-      email: "rohan.mehta@gmail.com",
-      type: "Admin",
-    },
-    {
-      employee_id: 8099,
-      name: "Ishan Sharma",
-      designation: "Software Developer",
-      employment_status: "ACTIVE",
-      hr_id: 5359,
-      manager_id: 6441,
-      director_id: 7762,
-      email: "ishan@gmail.com",
-      type: "Member",
-    },
-  ]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingEmployee, setDeletingEmployee] = useState(null);
+  const [employees, setEmployees] = useState([]);
 
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [showModal, setShowModal] = useState(false);
@@ -57,16 +24,14 @@ const EmployeeList = () => {
     setShowDeleteModal(true);
   };
   const handleDeleteConfirm = async (id) => {
-    console.log(id);
     try {
-      // API call to delete from backend
-      await axios.patch(
-        `http://localhost:3000/deleteUser/${id}`,
-        {},
+      const response = await axios.patch(
+        `${API.BASE_URL}${API.DELETE_EMPLOYEE}`,
+        { employee_id: id },
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("Token")}`,
             "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("Token")}`,
           },
         }
       );
@@ -82,7 +47,6 @@ const EmployeeList = () => {
   };
 
   const handleSave = async (updatedEmployee) => {
-    console.log(updatedEmployee);
     // setEmployees(
     //   employees.map((emp) =>
     //     emp.employee_id === updatedEmployee.employee_id ? updatedEmployee : emp
@@ -90,15 +54,13 @@ const EmployeeList = () => {
     // );/
     try {
       const data = await axios.post(
-        "http://localhost:3000/updateUser",
+        `${API.BASE_URL}${API.UPDATE_EMPLOYEE}`,
         {
           employee_id: updatedEmployee?.employee_id,
           name: updatedEmployee?.name,
           email: updatedEmployee?.email,
-          designation: updatedEmployee?.designation,
-          hr_id: updatedEmployee?.hr_id?.employee_id,
-          manager_id: updatedEmployee?.manager_id?.employee_id,
-          director_id: updatedEmployee?.director_id.employee_id,
+          emp_type_id: updatedEmployee?.designation?.employeeTypeId,
+          manager_id: updatedEmployee?.manager.employeeId,
         },
         {
           headers: {
@@ -117,16 +79,12 @@ const EmployeeList = () => {
   const fetchData = async () => {
     try {
       const employee = JSON.parse(localStorage.getItem("Employee"));
-      console.log(employee.id);
-      const response = await axios.get(
-        `http://localhost:3000/fetchAllPeopleByHrId/${employee.id}`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("Token")}`,
-          },
-        }
-      );
+      const response = await axios.get(`${API.BASE_URL}${API.ALL_EMPLOYEE}`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("Token")}`,
+        },
+      });
       setEmployees(response?.data);
     } catch (err) {
       console.log(err);
@@ -149,10 +107,10 @@ const EmployeeList = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-h-[calc(100vh-200px)] overflow-auto custom-scrollbar">
           {employees.map((employee) => (
             <EmployeeCard
-              key={employee.employee_id}
+              key={employee.id}
               employee={employee}
               onEdit={handleEdit}
               onDelete={handleDeleteClick}

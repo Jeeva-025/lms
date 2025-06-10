@@ -30,11 +30,11 @@ const leaveRequestRoutes = [
   },
   {
     method: "GET",
-    path: "/all-employeee-leave-request/{employee_id}",
+    path: "/all-employee-leave-request",
     options: {
       handler: leaveRequestController.fetchEmployeeLeaveHistory,
       validate: {
-        params: leaveRequestValidation.validateEmployeeId,
+        query: leaveRequestValidation.validateEmployeeId,
         failAction: (request, h, err) => {
           return h.response({ message: err.message }).code(400).takeover();
         },
@@ -44,18 +44,17 @@ const leaveRequestRoutes = [
 
   {
     method: "GET",
-    path: "/leave-request-history/{employee_id}",
+    path: "/leave-request-history/{id}",
     options: {
       handler: leaveRequestController.fetchLeaveRequestHistory,
       validate: {
-        params: leaveRequestValidation.validateEmployeeId,
+        params: leaveRequestValidation.validateId,
         failAction: (request, h, err) => {
           return h.response({ message: err.message }).code(400).takeover();
         },
       },
     },
   },
-
   {
     method: "PATCH",
     path: "/approval-of-leave",
@@ -76,6 +75,46 @@ const leaveRequestRoutes = [
       handler: leaveRequestController.fetchTeamMemberLeaves,
       validate: {
         params: leaveRequestValidation.validateId,
+        failAction: (request, h, err) => {
+          return h.response({ message: err.message }).code(400).takeover();
+        },
+      },
+    },
+  },
+  {
+    method: "GET",
+    path: "/all-approved-leave-date/{id}",
+    options: {
+      handler: leaveRequestController.fetchApprovedLeaveDate,
+      validate: {
+        params: leaveRequestValidation.validateId,
+        failAction: (request, h, err) => {
+          return h.response({ message: err.message }).code(400).takeover();
+        },
+      },
+    },
+  },
+  {
+    method: "PATCH",
+    path: "/reject-leave-request",
+    options: {
+      handler: leaveRequestController.rejectLeaveRequest,
+      validate: {
+        payload: leaveRequestValidation.rejectRequest,
+        failAction: (request, h, err) => {
+          return h.response({ message: err.message }).code(400).takeover();
+        },
+      },
+    },
+  },
+
+  {
+    method: "PATCH",
+    path: "/cancel-leave",
+    options: {
+      handler: leaveRequestController.cancelLeaveRequest,
+      validate: {
+        payload: leaveRequestValidation.validateId,
         failAction: (request, h, err) => {
           return h.response({ message: err.message }).code(400).takeover();
         },

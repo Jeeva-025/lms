@@ -1,57 +1,33 @@
 import { useState, useEffect } from "react";
 import { FiX, FiSave } from "react-icons/fi";
-import PropTypes from "prop-types";
 import axios from "axios";
 import { toast } from "react-toastify";
+import API from "../utils/API";
 
 const EditEmployeeModel = ({ employee, onClose, onSave }) => {
   console.log(employee);
   const [formData, setFormData] = useState({
-    employee_id: employee.employee_id,
-    designation: employee.designation,
-    manager_id: employee.manager_id,
-    hr_id: employee.hr_id,
-    director_id: employee.director_id,
+    employee_id: employee.id,
+    designation: {
+      employeeTypeId: employee.empTypeId,
+      name: employee.designation,
+    },
+    manager: {
+      employeeId: employee.manager_id,
+      name: employee.manager_name,
+    },
     email: employee.email,
-    employment_status: employee.employment_status,
-    type: employee.type,
     name: employee.name,
   });
-  console.log(formData.designation);
-  const [hr, setHR] = useState([]);
-  const [manager, setManager] = useState([]);
-  const [director, setDirector] = useState([]);
-  const [matchedData, setMatchedData] = useState({
-    hr: {},
-    manager: {},
-    director: {},
-  });
-  console.log(hr);
-  console.log(manager);
-  console.log(director);
 
-  const roles = {
-    hr: "HR",
-    manager: "Manager",
-    director: "Director",
-  };
+  const [manager, setManager] = useState([]);
+  const [designations, setDesignation] = useState([]);
+
   const [showDropDown, setShowDropDown] = useState({
-    hr: false,
     manager: false,
-    director: false,
-    type: false,
     designation: false,
   });
 
-  const types = ["Admin", "Member"];
-  const designations = [
-    "Software Developer",
-    "Software Tester",
-    "Cloud Engineer",
-    "Devops Engineer",
-    "UX/UI Designer",
-    "Manager",
-  ];
   const handleChange = (e) => {
     const { name, value } = e.target;
     console.log(name);
@@ -60,32 +36,28 @@ const EditEmployeeModel = ({ employee, onClose, onSave }) => {
   };
   const fetchData = async () => {
     try {
-      const arr = Object.values(roles);
-      for (const each of arr) {
-        const response = await axios.get(
-          `http://localhost:3000/employee/people?name=${each}`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("Token")}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+      const { data } = await axios.get(
+        `${API.BASE_URL}${API.ALL_EMPOYEE_TYPE}`,
 
-        switch (each) {
-          case roles.hr:
-            setHR(response.data);
-            break;
-          case roles.manager:
-            setManager(response.data);
-            break;
-          case roles.director:
-            setDirector(response.data);
-            break;
-          default:
-            console.warn("Unexpected role:", each);
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("Token")}`,
+            "Content-Type": "application/json",
+          },
         }
-      }
+      );
+      setDesignation(data);
+      const response = await axios.get(
+        `${API.BASE_URL}${API.ALL_SENIOR_EMPLOYEE}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("Token")}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      console.log(response?.data);
+      setManager(response.data);
     } catch (err) {
       console.error(err);
       toast.error("Failed to fetch employee data", {
@@ -97,31 +69,9 @@ const EditEmployeeModel = ({ employee, onClose, onSave }) => {
   useEffect(() => {
     fetchData();
   }, []);
-  useEffect(() => {
-    if (hr.length > 0) {
-      const data = hr.find((each) => each.employee_id === employee.hr_id);
-      setMatchedData((prev) => ({ ...prev, hr: data }));
-      setFormData((prev) => ({ ...prev, hr_id: data }));
-    }
 
-    if (manager.length > 0) {
-      const data = manager.find(
-        (each) => each.employee_id === employee.manager_id
-      );
-      setMatchedData((prev) => ({ ...prev, manager: data }));
-      setFormData((prev) => ({ ...prev, manager_id: data }));
-    }
-
-    if (director.length > 0) {
-      const data = director.find(
-        (each) => each.employee_id === employee.director_id
-      );
-      setMatchedData((prev) => ({ ...prev, director: data }));
-      setFormData((prev) => ({ ...prev, director_id: data }));
-    }
-  }, [hr, manager, director]);
-
-  console.log(matchedData);
+  console.log(manager);
+  console.log(designations);
   return (
     <div className="fixed inset-0 bg-black/30 flex items-center justify-end backdrop-blur-sm  z-50 h-full">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md h-full">
@@ -177,10 +127,10 @@ const EditEmployeeModel = ({ employee, onClose, onSave }) => {
             >
               <span
                 className={
-                  formData.designation ? "text-gray-800" : "text-gray-400"
+                  formData.designation.name ? "text-gray-800" : "text-gray-400"
                 }
               >
-                {formData.designation || "Select Designation"}
+                {formData.designation.name || "Select Designation"}
               </span>
               <svg
                 className={`w-5 h-5 transition-transform text-gray-500 ${
@@ -210,20 +160,26 @@ const EditEmployeeModel = ({ employee, onClose, onSave }) => {
                         : "border-b border-gray-100"
                     }`}
                     onClick={() => {
-                      setFormData((prev) => ({ ...prev, designation }));
+                      setFormData((prev) => ({
+                        ...prev,
+                        designation: {
+                          employeeTypeId: designation.employeeTypeId,
+                          name: designation.name,
+                        },
+                      }));
                       setShowDropDown((prev) => ({
                         ...prev,
                         designation: false,
                       }));
                     }}
                   >
-                    {designation}
+                    {designation.name}
                   </div>
                 ))}
               </div>
             )}
           </div>
-          {formData.manager_id && (
+          {formData.manager.name && (
             <div className="space-y-2 relative">
               <label className="block text-gray-700 font-medium">Manager</label>
               <div
@@ -237,10 +193,10 @@ const EditEmployeeModel = ({ employee, onClose, onSave }) => {
               >
                 <span
                   className={
-                    formData.manager_id.name ? "text-gray-800" : "text-gray-400"
+                    formData.manager.name ? "text-gray-800" : "text-gray-400"
                   }
                 >
-                  {formData.manager_id.name || "Select Designation"}
+                  {formData.manager.name || "Select Designation"}
                 </span>
                 <svg
                   className={`w-5 h-5 transition-transform text-gray-500 ${
@@ -260,7 +216,7 @@ const EditEmployeeModel = ({ employee, onClose, onSave }) => {
               </div>
 
               {showDropDown.manager && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg">
+                <div className="absolute z-10 w-full h-[190px] overflow-y-auto custom-scrollbar mt-1 bg-white border border-gray-200 rounded-lg shadow-lg">
                   {manager.map((manager, index) => (
                     <div
                       key={index}
@@ -272,7 +228,10 @@ const EditEmployeeModel = ({ employee, onClose, onSave }) => {
                       onClick={() => {
                         setFormData((prev) => ({
                           ...prev,
-                          manager_id: manager,
+                          manager: {
+                            employeeId: manager.employeeId,
+                            name: manager.name,
+                          },
                         }));
                         setShowDropDown((prev) => ({
                           ...prev,
@@ -280,147 +239,13 @@ const EditEmployeeModel = ({ employee, onClose, onSave }) => {
                         }));
                       }}
                     >
-                      {manager.name}
+                      {manager.name} ({manager.designation})
                     </div>
                   ))}
                 </div>
               )}
             </div>
           )}
-          <div className="space-y-2 relative">
-            <label className="block text-gray-700 font-medium">HR</label>
-            <div
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg cursor-pointer flex justify-between items-center bg-gray-50 hover:bg-white transition-all"
-              onClick={() =>
-                setShowDropDown((prev) => ({
-                  ...prev,
-                  hr: !showDropDown.hr,
-                }))
-              }
-            >
-              <span
-                className={
-                  formData.hr_id.name ? "text-gray-800" : "text-gray-400"
-                }
-              >
-                {formData.hr_id.name || "Select Designation"}
-              </span>
-              <svg
-                className={`w-5 h-5 transition-transform text-gray-500 ${
-                  showDropDown.hr ? "rotate-180" : ""
-                }`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </div>
-
-            {showDropDown.hr && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg">
-                {hr.map((hr, index) => (
-                  <div
-                    key={index}
-                    className={`px-4 py-2 hover:bg-blue-50 cursor-pointer transition-colors ${
-                      index === hr.length - 1 ? "" : "border-b border-gray-100"
-                    }`}
-                    onClick={() => {
-                      setFormData((prev) => ({ ...prev, hr_id: hr }));
-                      setShowDropDown((prev) => ({
-                        ...prev,
-                        hr: false,
-                      }));
-                    }}
-                  >
-                    {hr.name}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          <div className="space-y-2 relative">
-            <label className="block text-gray-700 font-medium">Director</label>
-            <div
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg cursor-pointer flex justify-between items-center bg-gray-50 hover:bg-white transition-all"
-              onClick={() =>
-                setShowDropDown((prev) => ({
-                  ...prev,
-                  director: !showDropDown.director,
-                }))
-              }
-            >
-              <span
-                className={
-                  formData.director_id.name ? "text-gray-800" : "text-gray-400"
-                }
-              >
-                {formData.director_id.name || "Select Designation"}
-              </span>
-              <svg
-                className={`w-5 h-5 transition-transform text-gray-500 ${
-                  showDropDown.director ? "rotate-180" : ""
-                }`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </div>
-
-            {showDropDown.director && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg">
-                {director.map((director, index) => (
-                  <div
-                    key={index}
-                    className={`px-4 py-2 hover:bg-blue-50 cursor-pointer transition-colors ${
-                      index === director.length - 1
-                        ? ""
-                        : "border-b border-gray-100"
-                    }`}
-                    onClick={() => {
-                      setFormData((prev) => ({
-                        ...prev,
-                        director_id: director,
-                      }));
-                      setShowDropDown((prev) => ({
-                        ...prev,
-                        director: false,
-                      }));
-                    }}
-                  >
-                    {director.name}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Status
-            </label>
-            <select
-              name="employment_status"
-              value={formData.employment_status}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="ACTIVE">Active</option>
-              <option value="INACTIVE">Inactive</option>
-            </select>
-          </div> */}
         </div>
 
         <div className="flex justify-end space-x-3 p-4 border-t">
@@ -441,12 +266,6 @@ const EditEmployeeModel = ({ employee, onClose, onSave }) => {
       </div>
     </div>
   );
-};
-
-EditEmployeeModel.propTypes = {
-  employee: PropTypes.object.isRequired,
-  onClose: PropTypes.func.isRequired,
-  onSave: PropTypes.func.isRequired,
 };
 
 export default EditEmployeeModel;

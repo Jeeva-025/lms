@@ -3,33 +3,19 @@ const LeaveRequest = require("../models/entities/leaveRequest");
 const LeaveRemaining = require("../models/entities/leaveBalance");
 const Employee = require("../models/entities/employee");
 const LeaveType = require("../models/entities/leaveType");
-const { Brackets, Not } = require("typeorm");
+const {
+  Brackets,
+  Not,
+  In,
+  MoreThanOrEqual,
+  LessThanOrEqual,
+} = require("typeorm");
 const ApprovalFlow = require("../models/entities/approvalFlow");
 const EmployeeType = require("../models/entities/employeeType");
-const status = {
-  Active: "200",
-  Inactive: "400",
-};
-const approvalStatus = {
-  Approved: 0,
-  Rejected: 1,
-  Pending: 2,
-  Cancelled: 3,
-};
+const { status, approvalStatus } = require("../utils/constant");
+const { date } = require("joi");
 
 const createApprovalFlow = async (leaveId, employeeId, approvalLevels) => {
-  const status = {
-    Active: 200,
-    Inactive: 400,
-  };
-  const approvalStatus = {
-    Approved: 0,
-    Rejected: 1,
-    Pending: 2,
-    Cancelled: 3,
-  };
-
-  let isFirstRecord = true;
   const approvalFlowRepository = AppDataSource.getRepository(ApprovalFlow);
   const employeeRepository = AppDataSource.getRepository(Employee);
 
@@ -37,6 +23,7 @@ const createApprovalFlow = async (leaveId, employeeId, approvalLevels) => {
     const requestingEmployeeData = await employeeRepository.findOne({
       where: { id: employeeId },
     });
+    let isFirstRecord = true;
 
     if (!requestingEmployeeData) {
       return h.response({ message: "Employee Not Found" }).code(404);
@@ -82,12 +69,6 @@ const createApprovalFlow = async (leaveId, employeeId, approvalLevels) => {
 };
 
 const createLeaveRequest = async (request, h) => {
-  const approvalStatus = {
-    Approved: 0,
-    Rejected: 1,
-    Pending: 2,
-    Cancelled: 3,
-  };
   try {
     const strLowerCase = (str) => {
       return str.trim().toLowerCase();
@@ -99,14 +80,26 @@ const createLeaveRequest = async (request, h) => {
       where: { id: employee_id },
       relations: ["employeeType"],
     });
-    console.log(emp);
-    if (!emp) {
+    if (!emp || emp.length === 0) {
       return h.response({ message: "Data not Found" }).code(404);
     }
-
     const leaveRequestRepo = AppDataSource.getRepository(LeaveRequest);
     const approvalFlowRepo = AppDataSource.getRepository(ApprovalFlow);
     const leaveRemainingRepo = AppDataSource.getRepository(LeaveRemaining);
+
+    const leaveRequestData = await leaveRequestRepo.findOne({
+      where: {
+        employee_id,
+        status: status.Active.toString(),
+        start_date: LessThanOrEqual(new Date(end_date)),
+        end_date: MoreThanOrEqual(new Date(start_date)),
+      },
+    });
+    if (leaveRequestData) {
+      return h
+        .response({ message: "Leave already exists during this date range" })
+        .code(400);
+    }
     const leaveRemData = await leaveRemainingRepo.findOne({
       where: { employee_id, leave_type_id: leave_id },
       relations: ["leaveType"],
@@ -154,7 +147,7 @@ const createLeaveRequest = async (request, h) => {
       strLowerCase(emp[0].employeeType.name).includes("senior") ||
       strLowerCase(emp[0].employeeType.name).includes("hr")
     ) {
-      if (strLowerCase(emp[0].designation) === "manager") {
+      if (strLowerCase(emp[0].employeeType.name).includes("senior")) {
         const approval = diffInDays >= 5 ? 2 : 1;
         const leaveReq = leaveRequestRepo.create({
           leave_type_id: leave_id,
@@ -206,24 +199,25 @@ const createLeaveRequest = async (request, h) => {
 };
 
 const cancelLeaveRequest = async (request, h) => {
-  const approvalStatus = {
-    Approved: 0,
-    Rejected: 1,
-    Pending: 2,
-    Cancelled: 3,
-  };
   try {
-    const { id } = request.params;
+    const { id } = request.payload;
+    console.log(id);
     const leaveRequestRepo = AppDataSource.getRepository(LeaveRequest);
     const approvalFlowRepo = AppDataSource.getRepository(ApprovalFlow);
-    const leaveRequestData = await leaveRequestRepo.findOne({ where: { id } });
+    const leaveRequestData = await leaveRequestRepo.findOne({
+      where: { id },
+    });
     if (!leaveRequestData) {
       return h.response({ message: "Data not Found" }).code(404);
     }
 
     leaveRequestData.approval_status = approvalStatus.Cancelled;
     const approvalFlowData = await approvalFlowRepo.find({
-      where: { leave_id: id },
+      where: {
+        leave_id: id,
+        status: status.Active.toString(),
+        approval_status: approvalStatus.Pending.toString(),
+      },
     });
     for (const each of approvalFlowData) {
       each.approval_status = approvalStatus.Cancelled;
@@ -241,14 +235,8 @@ const cancelLeaveRequest = async (request, h) => {
 };
 
 const rejectLeaveRequest = async (request, h) => {
-  const approvalStatus = {
-    Approved: 0,
-    Rejected: 1,
-    Pending: 2,
-    Cancelled: 3,
-  };
   try {
-    const { id, approver_id } = request.params;
+    const { id, approver_id } = request.payload;
     const leaveRequestRepo = AppDataSource.getRepository(LeaveRequest);
     const approvalFlowRepo = AppDataSource.getRepository(ApprovalFlow);
     const leaveRequestData = await leaveRequestRepo.findOne({ where: { id } });
@@ -258,7 +246,13 @@ const rejectLeaveRequest = async (request, h) => {
 
     leaveRequestData.approval_status = approvalStatus.Rejected;
     const approvalFlowData = await approvalFlowRepo.find({
-      where: { leave_id: id, approver_id },
+      where: {
+        leave_id: id,
+        approval_status: approvalStatus.Pending.toString(),
+      },
+      order: {
+        id: "ASC",
+      },
     });
 
     for (const each of approvalFlowData) {
@@ -279,10 +273,45 @@ const rejectLeaveRequest = async (request, h) => {
 
 const fetchEmployeeLeaveHistory = async (request, h) => {
   try {
-    const { employee_id } = request.params;
+    const {
+      employee_id,
+      start_date,
+      end_date,
+      approval_status,
+      leave_type_id,
+    } = request.query;
+    let whereCondition = {
+      employee_id,
+      status: status.Active.toString(),
+    };
+    if (start_date) {
+      const adjustedStartDate = new Date(start_date);
+      adjustedStartDate.setDate(adjustedStartDate.getDate() + 1);
+      whereCondition.start_date = MoreThanOrEqual(
+        adjustedStartDate.toISOString().split("T")[0]
+      );
+    }
+    if (end_date) {
+      const adjustedEndDate = new Date(end_date);
+      adjustedEndDate.setDate(adjustedEndDate.getDate() + 1);
+
+      whereCondition.end_date = LessThanOrEqual(
+        adjustedEndDate.toISOString().split("T")[0]
+      );
+    }
+    if (leave_type_id) {
+      whereCondition.leave_type_id = leave_type_id;
+    }
+    if (approval_status) {
+      whereCondition.approval_status =
+        approvalStatus[
+          approval_status.charAt(0).toUpperCase() +
+            approval_status.slice(1).toLowerCase()
+        ].toString();
+    }
     const leaveRequestRepo = AppDataSource.getRepository(LeaveRequest);
     const leaveRequestData = await leaveRequestRepo.find({
-      where: { employee_id, status: status.Active },
+      where: whereCondition,
       relations: ["approvalFlow.employee", "leaveType"],
     });
     if (!leaveRequestData)
@@ -302,6 +331,7 @@ const fetchEmployeeLeaveHistory = async (request, h) => {
         approvalStatus: Object.keys(approvalStatus)[each.approval_status],
         requestedAt: each.requested_at,
         leaveName: each.leaveType.name,
+        leave_type_id: each.leaveType.id,
         approvalFlow: each.approvalFlow.map((item) => ({
           name: item.employee.name,
           approvalStatus: Object.keys(approvalStatus)[item.approval_status],
@@ -317,16 +347,6 @@ const fetchEmployeeLeaveHistory = async (request, h) => {
 };
 
 const approvalOfLeave = async (request, h) => {
-  const approvalStatus = {
-    Approved: 0,
-    Rejected: 1,
-    Pending: 2,
-    Cancelled: 3,
-  };
-  const status = {
-    Active: 200,
-    Inactive: 400,
-  };
   try {
     const { id } = request.payload;
     console.log(id);
@@ -401,26 +421,17 @@ const approvalOfLeave = async (request, h) => {
 };
 
 const fetchLeaveRequestForApproval = async (request, h) => {
-  const approvalStatus = {
-    Approved: "0",
-    Rejected: "1",
-    Pending: "2",
-    Cancelled: "3",
-  };
-  const status = {
-    Active: "200",
-    Inactive: "400",
-  };
   try {
     const { id } = request.query;
+    console.log(id);
     const approvalFlowRepo = AppDataSource.getRepository(ApprovalFlow);
     const employeeTypeRepo = AppDataSource.getRepository(EmployeeType);
     const approvalFlowData = await approvalFlowRepo.find({
       where: {
         approver_id: id,
-        status: status.Active,
+        status: status.Active.toString(),
         is_active: true,
-        approval_status: approvalStatus.Pending,
+        approval_status: approvalStatus.Pending.toString(),
       },
       relations: [
         "leaveRequest",
@@ -500,26 +511,17 @@ const fetchLeaveRequestForApproval = async (request, h) => {
 };
 
 const fetchLeaveRequestHistory = async (request, h) => {
-  const approvalStatus = {
-    Approved: "0",
-    Rejected: "1",
-    Pending: "2",
-    Cancelled: "3",
-  };
-  const status = {
-    Active: "200",
-    Inactive: "400",
-  };
   try {
     console.log("from leave Rquest history to admin");
     const { id } = request.params;
+    console.log(id);
     const approvalFlowRepo = AppDataSource.getRepository(ApprovalFlow);
     const employeeTypeRepo = AppDataSource.getRepository(EmployeeType);
     const approvalFlowData = await approvalFlowRepo.find({
       where: {
         approver_id: id,
-        status: status.Active,
-        approval_status: Not(approvalStatus.Pending),
+        status: status.Active.toString(),
+        approval_status: Not(approvalStatus.Pending.toString()),
       },
       relations: [
         "leaveRequest",
@@ -597,27 +599,7 @@ const fetchLeaveRequestHistory = async (request, h) => {
     return h.response({ message: "Failed to fetch Data" }).code(500);
   }
 };
-const fetchNoOfRequestByStatus = async (request, h) => {
-  try {
-    const { employee_id, approval_status } = request.payload;
-    const leaveRequestRepo = AppDataSource.getRepository(LeaveRequest);
-    const data = await leaveRequestRepo.count({
-      where: { employee_id, approval_status, status: "ACTIVE" },
-    });
-
-    return h.response({ data }).code(200);
-  } catch (err) {
-    console.log(err);
-    return h.response({ message: "Failed to fetch Data" }).code(500);
-  }
-};
 const fetchTeamMemberLeaves = async (request, h) => {
-  const approvalStatus = {
-    Approved: 0,
-    Rejected: 1,
-    Pending: 2,
-    Cancelled: 3,
-  };
   try {
     const { id } = request.params;
     const employeeRepo = AppDataSource.getRepository(Employee);
@@ -627,24 +609,49 @@ const fetchTeamMemberLeaves = async (request, h) => {
     if (employeeData.length == 0) {
       return h.response({ message: "Data not Found" }).code(404);
     }
-    const employeeIds = employeeData.map((each) => emp.id);
+    let employeeIds = employeeData.map((each) => each.id);
+    employeeIds = [...employeeIds, id];
 
     const approvedLeaveRequestData = await leaveRequestRepo.find({
       where: {
         employee_id: In(employeeIds),
-        approval_status: approvalStatus.Approved,
+        approval_status: approvalStatus.Approved.toString(),
       },
       relations: ["employee", "leaveType"],
     });
 
-    return h
-      .response({
-        message: "Approved leave requests under this manager",
-        data: approvedLeaveRequests,
-      })
-      .code(200);
+    const transformData = approvedLeaveRequestData.map((each) => ({
+      name: each.employee.name,
+      id: each.employee_id,
+      startDate: each.start_date,
+      endDate: each.end_date,
+      leaveType: each.leaveType.name,
+    }));
+    return h.response(transformData).code(200);
   } catch (err) {
     console.log(err);
+    return h.response({ message: "Failed to fetch Data" }).code(500);
+  }
+};
+const fetchApprovedLeaveDate = async (request, h) => {
+  try {
+    const { id } = request.params;
+    const leaveRequestRepo = AppDataSource.getRepository(LeaveRequest);
+    const leaveRequestData = await leaveRequestRepo.find({
+      where: {
+        employee_id: id,
+        approval_status: approvalStatus.Approved.toString(),
+      },
+    });
+    const transformedData = leaveRequestData.map((each) => ({
+      startDate: each.start_date,
+      endDate: each.end_date,
+    }));
+
+    return h.response(transformedData).code(200);
+  } catch (err) {
+    console.log(err);
+    return h.response({ message: "Failed to fetch Data" }).code(500);
   }
 };
 
@@ -655,7 +662,7 @@ module.exports = {
   fetchEmployeeLeaveHistory,
   approvalOfLeave,
   fetchLeaveRequestForApproval,
-  fetchNoOfRequestByStatus,
   fetchLeaveRequestHistory,
   fetchTeamMemberLeaves,
+  fetchApprovedLeaveDate,
 };

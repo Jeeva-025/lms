@@ -1,4 +1,5 @@
 const Joi = require("joi");
+const { approvalStatus } = require("../utils/constant");
 
 const validate = {};
 validate.validateLeaveRequest = Joi.object({
@@ -15,10 +16,18 @@ validate.validateManagerId = Joi.object({
 });
 validate.validateEmployeeId = Joi.object({
   employee_id: Joi.number().required(),
-});
+  start_date: Joi.date(),
+  end_date: Joi.date(),
+  approvalStatus: Joi.string(),
+  leave_type_id: Joi.number(),
+}).unknown(true);
 
 validate.validateId = Joi.object({
   id: Joi.number().required(),
+});
+validate.rejectRequest = Joi.object({
+  id: Joi.number().required(),
+  approver_id: Joi.number().required(),
 });
 
 module.exports = validate;

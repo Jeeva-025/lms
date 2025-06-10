@@ -1,12 +1,20 @@
 import { useState, useEffect } from "react";
-import { FiChevronLeft, FiChevronRight, FiCalendar } from "react-icons/fi";
+import {
+  FiChevronLeft,
+  FiChevronRight,
+  FiCalendar,
+  FiStar,
+} from "react-icons/fi";
 import axios from "axios";
+import API from "../utils/API";
 
 const LeaveCalendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [hoveredLeave, setHoveredLeave] = useState(null);
+  const [hoveredHoliday, setHoveredHoliday] = useState(null);
   const [leaves, setLeaves] = useState([]);
+  const [holidays, setHolidays] = useState([]);
 
   const daysOfWeek = ["S", "M", "T", "W", "T", "F", "S"];
 
@@ -27,9 +35,9 @@ const LeaveCalendar = () => {
 
   const employeeColors = {};
   leaves.forEach((request, index) => {
-    if (!employeeColors[request.employeeName]) {
+    if (!employeeColors[request.name]) {
       const hue = (index * 137.508) % 360;
-      employeeColors[request.employeeName] = `hsl(${hue}, 70%, 60%)`;
+      employeeColors[request.name] = `hsl(${hue}, 70%, 60%)`;
     }
   });
 
@@ -68,6 +76,52 @@ const LeaveCalendar = () => {
     });
   };
 
+  const isHoliday = (year, month, day) => {
+    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(
+      day
+    ).padStart(2, "0")}`;
+    return holidays.find((holiday) => holiday.holiday_date === dateStr);
+  };
+
+  const fetchHolidays = async () => {
+    try {
+      const response = await axios.get(`${API.BASE_URL}${API.ALL_HOLIDAYS}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("Token")}`,
+          "Content-Type": "application/json",
+        },
+      });
+      setHolidays(response.data);
+      console.log(response?.data);
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  const fetchTeamMembersLeave = async () => {
+    const employee = JSON.parse(localStorage.getItem("Employee"));
+    try {
+      const response = await axios.get(
+        `${API.BASE_URL}${API.TEAM_MEMBERS_LEAVE}/${employee.managerId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("Token")}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      console.log(response?.data);
+      setLeaves(response?.data);
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  useEffect(() => {
+    fetchTeamMembersLeave();
+    fetchHolidays();
+  }, []);
+
   const renderCalendar = () => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -96,9 +150,9 @@ const LeaveCalendar = () => {
         new Date(year, month, day).getDay() === 6;
 
       const leavesOnThisDay = isDateInLeave(year, month, day);
-      leavesOnThisDay.sort((a, b) =>
-        a.employeeName.localeCompare(b.employeeName)
-      );
+      leavesOnThisDay.sort((a, b) => a.name.localeCompare(b.name));
+
+      const holiday = isHoliday(year, month, day);
 
       days.push(
         <div
@@ -122,25 +176,50 @@ const LeaveCalendar = () => {
             }
             hover:bg-blue-50 hover:shadow-md`}
         >
-          <span
-            className={`text-xs font-medium ${
-              isSelected ? "text-white" : "text-gray-500"
-            }`}
-          >
-            {day}
-          </span>
+          <div className="flex items-center justify-center w-full">
+            <span
+              className={`text-xs font-medium ${
+                isSelected
+                  ? "text-white"
+                  : isWeekend
+                  ? "text-gray-400"
+                  : "text-gray-600"
+              }`}
+            >
+              {day}
+            </span>
+            {holiday && (
+              <FiStar
+                className={`ml-1 text-xs ${
+                  holiday.is_floater ? "text-yellow-500" : "text-purple-500"
+                }`}
+                onMouseEnter={() => setHoveredHoliday({ ...holiday, day })}
+                onMouseLeave={() => setHoveredHoliday(null)}
+              />
+            )}
+          </div>
 
           <div className="flex flex-wrap justify-center mt-0.5 gap-0.5 w-full">
             {leavesOnThisDay.map((leave, idx) => (
               <div
                 key={`${day}-${idx}`}
                 className="w-5 h-2 rounded-full"
-                style={{ backgroundColor: employeeColors[leave.employeeName] }}
+                style={{ backgroundColor: employeeColors[leave.name] }}
                 onMouseEnter={() => setHoveredLeave({ ...leave, day })}
                 onMouseLeave={() => setHoveredLeave(null)}
               />
             ))}
           </div>
+
+          {holiday && (
+            <div
+              className={`absolute top-0 left-0 w-full h-full rounded-lg border-2 pointer-events-none ${
+                holiday.is_floater
+                  ? "border-yellow-400 opacity-30"
+                  : "border-purple-400 opacity-30"
+              }`}
+            />
+          )}
 
           {hoveredLeave && hoveredLeave.day === day && (
             <div
@@ -149,7 +228,7 @@ const LeaveCalendar = () => {
               }  left-1/2 transform -translate-x-1/2 mt-1 w-max max-w-xs px-2 py-1 bg-white rounded-lg shadow-lg border border-gray-200 text-xs`}
             >
               <div className="font-medium text-gray-900">
-                {hoveredLeave.employeeName}
+                {hoveredLeave.name}
               </div>
               <div className="text-gray-500">{hoveredLeave.leaveType}</div>
               <div className="text-gray-500">
@@ -163,35 +242,39 @@ const LeaveCalendar = () => {
               </div>
             </div>
           )}
+
+          {hoveredHoliday && hoveredHoliday.day === day && (
+            <div
+              className={`absolute z-10 ${
+                day <= 7 ? "top-full" : "bottom-full"
+              }  left-1/2 transform -translate-x-1/2 mt-1 w-max max-w-xs px-2 py-1 bg-white rounded-lg shadow-lg border border-gray-200 text-xs`}
+            >
+              <div className="font-medium text-gray-900">
+                {hoveredHoliday.name}
+              </div>
+              <div className="flex items-center text-gray-500">
+                <FiStar
+                  className={`mr-1 ${
+                    hoveredHoliday.is_floater
+                      ? "text-yellow-500"
+                      : "text-purple-500"
+                  }`}
+                />
+                {hoveredHoliday.is_floater
+                  ? "Floater Holiday"
+                  : "Fixed Holiday"}
+              </div>
+              <div className="text-gray-500">
+                {new Date(hoveredHoliday.holiday_date).toLocaleDateString()}
+              </div>
+            </div>
+          )}
         </div>
       );
     }
 
     return days;
   };
-
-  const fetchTeamMembersLeave = async () => {
-    const employee = JSON.parse(localStorage.getItem("Employee"));
-    try {
-      const response = await axios.get(
-        `http://localhost:3000/fetchTeamMembersLeave/${employee.id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("Token")}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      console.log(response?.data?.transformedLeaveRequests);
-      setLeaves(response?.data?.transformedLeaveRequests);
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
-  useEffect(() => {
-    fetchTeamMembersLeave();
-  }, []);
 
   return (
     <div
@@ -222,19 +305,32 @@ const LeaveCalendar = () => {
         </div>
       </div>
 
-      {Object.keys(employeeColors).length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-2">
-          {Object.entries(employeeColors).map(([employee, color]) => (
-            <div key={employee} className="flex items-center">
-              <div
-                className="w-3 h-3 rounded-full mr-1"
-                style={{ backgroundColor: color }}
-              />
-              <span className="text-xs text-gray-700">{employee}</span>
-            </div>
-          ))}
+      <div className="flex flex-wrap gap-4 mb-2">
+        {Object.keys(employeeColors).length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(employeeColors).map(([employee, color]) => (
+              <div key={employee} className="flex items-center">
+                <div
+                  className="w-3 h-3 rounded-full mr-1"
+                  style={{ backgroundColor: color }}
+                />
+                <span className="text-xs text-gray-700">{employee}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-center gap-2">
+          <div className="flex items-center">
+            <div className="w-3 h-3 rounded-full mr-1 bg-purple-500" />
+            <span className="text-xs text-gray-700">Fixed Holiday</span>
+          </div>
+          <div className="flex items-center">
+            <div className="w-3 h-3 rounded-full mr-1 bg-yellow-500" />
+            <span className="text-xs text-gray-700">Floater Holiday</span>
+          </div>
         </div>
-      )}
+      </div>
 
       <div className="grid grid-cols-7 gap-1 mb-1">
         {daysOfWeek.map((day, index) => (
@@ -268,6 +364,38 @@ const LeaveCalendar = () => {
               })}
             </p>
 
+            {isHoliday(
+              selectedDate.getFullYear(),
+              selectedDate.getMonth(),
+              selectedDate.getDate()
+            ) && (
+              <div className="mt-1">
+                <h4 className="text-xs font-medium text-gray-500">Holiday:</h4>
+                <div className="flex items-center">
+                  <FiStar
+                    className={`mr-1 ${
+                      isHoliday(
+                        selectedDate.getFullYear(),
+                        selectedDate.getMonth(),
+                        selectedDate.getDate()
+                      ).is_floater
+                        ? "text-yellow-500"
+                        : "text-purple-500"
+                    }`}
+                  />
+                  <span className="text-xs text-gray-700">
+                    {
+                      isHoliday(
+                        selectedDate.getFullYear(),
+                        selectedDate.getMonth(),
+                        selectedDate.getDate()
+                      ).name
+                    }
+                  </span>
+                </div>
+              </div>
+            )}
+
             {isDateInLeave(
               selectedDate.getFullYear(),
               selectedDate.getMonth(),
@@ -284,17 +412,17 @@ const LeaveCalendar = () => {
                     selectedDate.getDate()
                   ).map((leave) => (
                     <li
-                      key={`${leave.employeeName}-${leave.startDate}`}
+                      key={`${leave.name}-${leave.startDate}`}
                       className="flex items-center"
                     >
                       <div
                         className="w-2 h-2 rounded-full mr-1"
                         style={{
-                          backgroundColor: employeeColors[leave.employeeName],
+                          backgroundColor: employeeColors[leave.name],
                         }}
                       />
                       <span className="text-xs text-gray-700">
-                        {leave.employeeName} - {leave.leaveType}
+                        {leave.name} - {leave.leaveType}
                       </span>
                     </li>
                   ))}

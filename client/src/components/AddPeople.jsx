@@ -2,38 +2,24 @@ import React from "react";
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
+import API from "../utils/API";
 
 const AddPeople = () => {
   const [designations, setDesignation] = useState([]);
-  const [hr, setHR] = useState([]);
   const [manager, setManager] = useState([]);
-  const [selectedDesignation, setSelecetdDesignation] = useState("");
-  const [director, setDirector] = useState([]);
-
-  const roles = {
-    hr: "HR",
-    manager: "Manager",
-    director: "Director",
-  };
-
   const [showPassword, setShowPassword] = useState(false);
-
+  const [selectManager, setSelectedManager] = useState("");
   const [showDropDown, setShowDropDown] = useState({
-    hr: false,
     manager: false,
-    director: false,
-    type: false,
     designation: false,
   });
+  const [managerDropDown, setManagerDropDown] = useState([]);
 
   const [data, setData] = useState({
     firstName: "",
     lastName: "",
     designation: "",
-    hr: null,
     manager: null,
-    director: null,
-    type: "",
     email: "",
     password: "",
   });
@@ -64,7 +50,7 @@ const AddPeople = () => {
   const fetchData = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:3000/employee-type/all",
+        `${API.BASE_URL}${API.ALL_EMPOYEE_TYPE}`,
 
         {
           headers: {
@@ -74,7 +60,7 @@ const AddPeople = () => {
         }
       );
       const { data } = await axios.get(
-        "http://localhost:3000/senior-employee",
+        `${API.BASE_URL}${API.ALL_SENIOR_EMPLOYEE}`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("Token")}`,
@@ -85,6 +71,7 @@ const AddPeople = () => {
       console.log(response?.data);
       console.log(data);
       setManager(data);
+      setManagerDropDown(data);
       setDesignation(response?.data);
     } catch (err) {
       console.error(err);
@@ -106,7 +93,7 @@ const AddPeople = () => {
     try {
       if (verify()) {
         const response = await axios.post(
-          "http://localhost:3000/employee-create",
+          `${API.BASE_URL}${API.CREATE_EMPLOYEE}`,
           {
             name: `${data.firstName} ${data.lastName}`,
             emp_type_id: data.designation.employeeTypeId,
@@ -150,10 +137,7 @@ const AddPeople = () => {
       firstName: "",
       lastName: "",
       designation: "",
-      hr: null,
       manager: null,
-      director: null,
-      type: "",
       email: "",
       password: "",
     });
@@ -162,6 +146,12 @@ const AddPeople = () => {
   useEffect(() => {
     fetchData();
   }, []);
+  useEffect(() => {
+    if (manager.length)
+      setManagerDropDown(
+        manager.filter((each) => each.employeeId !== data?.manager?.employeeId)
+      );
+  }, [selectManager]);
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-gray-100 p-4">
@@ -211,7 +201,7 @@ const AddPeople = () => {
                 className="w-full px-4 py-2 border border-gray-200 rounded-lg cursor-pointer flex justify-between items-center bg-gray-50 hover:bg-white transition-all"
                 onClick={() =>
                   setShowDropDown((prev) => ({
-                    ...prev,
+                    manager: false,
                     designation: !showDropDown.designation,
                   }))
                 }
@@ -258,7 +248,7 @@ const AddPeople = () => {
                           designation: designation,
                         }));
                         setShowDropDown((prev) => ({
-                          ...prev,
+                          manager: false,
                           designation: false,
                         }));
                       }}
@@ -379,7 +369,7 @@ const AddPeople = () => {
                 className="w-full px-4 py-2 border border-gray-200 rounded-lg cursor-pointer flex justify-between items-center bg-gray-50 hover:bg-white transition-all"
                 onClick={() =>
                   setShowDropDown((prev) => ({
-                    ...prev,
+                    designation: false,
                     manager: !showDropDown.manager,
                   }))
                 }
@@ -408,7 +398,7 @@ const AddPeople = () => {
 
               {showDropDown.manager && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                  {manager.map((each, index) => (
+                  {managerDropDown.map((each, index) => (
                     <div
                       key={index}
                       className={`px-4 py-2 hover:bg-blue-50 cursor-pointer transition-colors ${
@@ -418,8 +408,9 @@ const AddPeople = () => {
                       }`}
                       onClick={() => {
                         setData((prev) => ({ ...prev, manager: each }));
+                        setSelectedManager(each.name);
                         setShowDropDown((prev) => ({
-                          ...prev,
+                          designation: false,
                           manager: false,
                         }));
                       }}
@@ -430,66 +421,6 @@ const AddPeople = () => {
                 </div>
               )}
             </div>
-
-            {/* <div className="space-y-2 relative">
-              <label className="block text-gray-700 font-medium">
-                Director
-              </label>
-              <div
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg cursor-pointer flex justify-between items-center bg-gray-50 hover:bg-white transition-all"
-                onClick={() =>
-                  setShowDropDown((prev) => ({
-                    ...prev,
-                    director: !showDropDown.director,
-                  }))
-                }
-              >
-                <span
-                  className={data.director ? "text-gray-800" : "text-gray-400"}
-                >
-                  {data.director ? data.director.name : "Select Director"}
-                </span>
-                <svg
-                  className={`w-5 h-5 transition-transform text-gray-500 ${
-                    showDropDown.director ? "rotate-180" : ""
-                  }`}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </div>
-
-              {showDropDown.director && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                  {director.map((each, index) => (
-                    <div
-                      key={index}
-                      className={`px-4 py-2 hover:bg-blue-50 cursor-pointer transition-colors ${
-                        index === director.length - 1
-                          ? ""
-                          : "border-b border-gray-100"
-                      }`}
-                      onClick={() => {
-                        setData((prev) => ({ ...prev, director: each }));
-                        setShowDropDown((prev) => ({
-                          ...prev,
-                          director: false,
-                        }));
-                      }}
-                    >
-                      {each.name}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div> */}
 
             <div className="space-y-2">
               <label className="block text-gray-700 font-medium">Email</label>

@@ -5,12 +5,16 @@ import Filter from "./Filter";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { useEffect } from "react";
+import ApprovalTracker from "./ApprovalTracker";
+import { FiDownload } from "react-icons/fi";
+import { FaTimes } from "react-icons/fa";
+import API from "../utils/API";
 
 const LeaveLogs = () => {
   const [showFilter, setShowFilter] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [data, setData] = useState({
-    leaveType: "",
+    leaveType: null,
     startDate: null,
     endDate: null,
     approvalStatus: "",
@@ -19,9 +23,11 @@ const LeaveLogs = () => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [leaveToCancel, setLeaveToCancel] = useState(null);
+  const [showTracker, setShowTracker] = useState(false);
   let tableData;
 
   const [leaves, setLeaves] = useState([]);
+  const [isFilterApplied, setFilterApplied] = useState(false);
 
   const getStatusStyles = (status) => {
     switch (status.toLowerCase()) {
@@ -42,6 +48,11 @@ const LeaveLogs = () => {
     setSelectedLeave(leave);
     setShowDetailsModal(true);
   };
+  const handleTracker = (leave) => {
+    console.log(leave);
+    setSelectedLeave(leave);
+    setShowTracker(true);
+  };
 
   const handleCancelLeave = (leave) => {
     setLeaveToCancel(leave);
@@ -53,8 +64,8 @@ const LeaveLogs = () => {
     // setLeaves(leaves.filter((leave) => leave.id !== leaveToCancel.id));/
     try {
       const response = await axios.patch(
-        `http://localhost:3000/cancelLeave/${leaveToCancel.id}`,
-        {},
+        `${API.BASE_URL}${API.CANCEL_LEAVE_REQUEST}`,
+        { id: leaveToCancel.leaveId },
         {
           headers: {
             "Content-Type": "application/json",
@@ -62,7 +73,6 @@ const LeaveLogs = () => {
           },
         }
       );
-
       fetchAllLeaveLogs();
     } catch (err) {
       console.log(err);
@@ -71,12 +81,21 @@ const LeaveLogs = () => {
     setLeaveToCancel(null);
   };
 
-  const fetchAllLeaveLogs = async () => {
+  const fetchAllLeaveLogs = async (data = {}) => {
     const employeeId = JSON.parse(localStorage.getItem("Employee")).id;
+    const params = new URLSearchParams();
+    params.append("employee_id", employeeId);
+
+    if (data?.leaveType?.id)
+      params.append("leave_type_id", data?.leaveType?.id);
+    if (data?.startDate) params.append("start_date", data?.startDate);
+    if (data?.endDate) params.append("end_date", data?.endDate);
+    if (data?.approvalStatus)
+      params.append("approval_status", data?.approvalStatus);
+
     try {
       const response = await axios.get(
-        `http://localhost:3000/all-employeee-leave-request/${employeeId}`,
-
+        `${API.BASE_URL}${API.EMPLOYEE_LEAVE_REQUEST}?${params.toString()}`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -84,7 +103,7 @@ const LeaveLogs = () => {
           },
         }
       );
-      console.log(response);
+      console.log(response?.data);
       tableData = response?.data;
 
       setLeaves(tableData);
@@ -119,11 +138,17 @@ const LeaveLogs = () => {
     "No of Days",
     "Reason",
   ];
+  const handleClearFilter = () => {
+    fetchAllLeaveLogs();
+    setFilterApplied(false);
+  };
 
   useEffect(() => {
     fetchAllLeaveLogs();
   }, []);
-
+  if (filteredData.length) {
+    console.log(filteredData);
+  }
   return (
     <div className="flex flex-col mt-6 relative bg-white rounded-xl p-6 shadow-sm">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
@@ -151,18 +176,35 @@ const LeaveLogs = () => {
             onClick={() => setShowFilter(true)}
             className={`flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200 rounded-lg text-purple-700 font-medium hover:shadow-md transition-all ${
               filteredData.length === 0
-                ? "cursor-not-allowed"
-                : "cursor-pointer"
+                ? "cursor-not-allowed opacity-10"
+                : "cursor-pointer "
             }`}
           >
             <FaFilter />
             <span>Filter</span>
           </button>
+          {isFilterApplied && (
+            <button
+              disabled={filteredData.length === 0}
+              onClick={handleClearFilter}
+              className={`flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-rose-50 to-rose-100 border border-rose-200 rounded-lg text-rose-700 font-medium hover:shadow-md transition-all ${
+                filteredData.length === 0
+                  ? "cursor-not-allowed"
+                  : "cursor-pointer"
+              }`}
+            >
+              <FaTimes />
+              <span>Clear</span>
+            </button>
+          )}
+          <a href="/company_leave_policy.pdf" download title="Leave Policy">
+            <FiDownload className="text-2xl cursor-pointer text-blue-600" />
+          </a>
         </div>
       </div>
       {filteredData.length > 0 ? (
         <>
-          <div className="overflow-x-auto rounded-lg border border-gray-200">
+          <div className=" rounded-lg border border-gray-200 max-h-[calc(100vh-300px)] overflow-auto custom-scrollbar">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -235,6 +277,12 @@ const LeaveLogs = () => {
                               >
                                 View Details
                               </button>
+                              <button
+                                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                onClick={() => handleTracker(row)}
+                              >
+                                Track Leave
+                              </button>
                               {row.approvalStatus.trim().toLowerCase() ===
                                 "pending" && (
                                 <button
@@ -266,6 +314,16 @@ const LeaveLogs = () => {
                 data={data}
                 setData={setData}
                 setShowFilter={setShowFilter}
+                handleApply={fetchAllLeaveLogs}
+                setFilterApplied={setFilterApplied}
+              />
+            </div>
+          )}
+          {showTracker && selectedLeave && (
+            <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 backdrop-blur-sm">
+              <ApprovalTracker
+                leave={selectedLeave}
+                onClose={() => setShowTracker(false)}
               />
             </div>
           )}

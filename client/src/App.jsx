@@ -5,7 +5,6 @@ import { useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import MemberPage from "./pages/MemberPage";
 import MemberNavBar from "./components/MemberNavBar";
-import AdminNavBar from "./components/AdminNavBar";
 import AdminPage from "./pages/AdminPage";
 import { toLowerTrim } from "./utils/helper";
 import "./App.css";
@@ -68,17 +67,9 @@ function App() {
               element={
                 tok ? (
                   type === "admin" ? (
-                    <AdminPage
-                      arr={arr}
-                      setSelectedValue={setSelectedValue}
-                      selectedValue={selectedValue}
-                    />
+                    <AdminPage selectedValue={selectedValue} />
                   ) : (
-                    <MemberPage
-                      arr={arr}
-                      setSelectedValue={setSelectedValue}
-                      selectedValue={selectedValue}
-                    />
+                    <MemberPage selectedValue={selectedValue} />
                   )
                 ) : (
                   <Navigate to="/login" replace />

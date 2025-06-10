@@ -6,7 +6,7 @@ import LeaveLogs from "../components/LeaveLogs";
 import { useEffect } from "react";
 import LeaveCalendar from "../components/LeaveCalender";
 
-const MemberPage = ({ arr, setSelectedValue, selectedValue }) => {
+const MemberPage = ({ selectedValue }) => {
   const [token, setToken] = useState(localStorage.getItem("Token"));
   const strLowerCase = (str) => {
     return str.trim().toLowerCase();

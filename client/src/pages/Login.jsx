@@ -79,9 +79,14 @@ const Login = ({ setToken, setSelectedValue }) => {
           });
         }
       }
-    } catch (err) {
-      console.log(err);
-      toast.error("Login failed! Please try again.", {
+    } catch (error) {
+      console.log(error);
+
+      const message =
+        error.response?.data?.message ||
+        "Something went wrong while submitting your request";
+
+      toast.error(message, {
         position: "top-center",
         autoClose: 2000,
         hideProgressBar: false,
@@ -102,11 +107,6 @@ const Login = ({ setToken, setSelectedValue }) => {
       >
         <div className=" flex flex-col justify-center items-center p-2 w-full  h-full space-y-10">
           <div className="flex flex-col items-center mb-8">
-            <img
-              src="https://cdn-icons-png.flaticon.com/512/1041/1041883.png"
-              alt="Waving Hand"
-              className="w-20 mb-4"
-            />
             <h2 className="text-2xl text-[#424242] font-semibold">
               Welcome to <span className="text-[#853169]">Leave Manager </span>{" "}
               👋
@@ -117,12 +117,24 @@ const Login = ({ setToken, setSelectedValue }) => {
           </div>
           <div className="flex flex-col justify-center items-start space-y-1 w-full px-10">
             <p className="text-[#616161] text-lg ">Email</p>
-            <input
-              className="px-4 py-2 h-12  bg-[#F5F5F5] border border-[#dfdfdf] rounded-lg w-full shadow-lg focus:outline-none focus:ring-2 focus:ring-[#dfdfdf]"
-              placeholder="Enter your Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
+            <div className="relative w-full">
+              <input
+                className="px-4 py-2 h-12  bg-[#F5F5F5] border border-[#dfdfdf] rounded-lg w-full shadow-lg focus:outline-none focus:ring-2 focus:ring-[#dfdfdf]"
+                placeholder="your@gmail.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                <svg
+                  className="h-5 w-5 text-gray-400"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                  <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                </svg>
+              </div>
+            </div>
           </div>
           <div className="flex flex-col justify-center items-start space-y-1 w-full px-10">
             <p className="text-[#616161] text-lg">Password</p>
@@ -130,7 +142,7 @@ const Login = ({ setToken, setSelectedValue }) => {
               <input
                 type={showPassword ? "text" : "password"}
                 className="px-4 py-2 h-12  bg-[#F5F5F5] border border-[#dfdfdf] rounded-lg w-full shadow-lg focus:outline-none focus:ring-2 focus:ring-[#dfdfdf]"
-                placeholder="Enter your Password"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />

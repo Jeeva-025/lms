@@ -4,13 +4,12 @@ import LeaveDetailsCards from "../components/LeaveDetailsCards";
 import LeaveRequest from "../components/LeaveRequest";
 import LeaveApproval from "../components/LeaveApproval";
 import AddPeople from "../components/AddPeople";
-import AdminLeaveLogs from "../components/AdminLeaveLogs";
 import LeaveLogs from "../components/LeaveLogs";
 import RequestedLeaveLogAdmin from "../components/RequestedLeaveLogAdmin";
 import EmployeeList from "../components/EmployeeList";
 import LeaveCalendar from "../components/LeaveCalender";
 
-const AdminPage = ({ arr, setSelectedValue, selectedValue }) => {
+const AdminPage = ({ selectedValue }) => {
   const [token, setToken] = useState(localStorage.getItem("Token"));
   const employee = JSON.parse(localStorage.getItem("Employee"));
   const [viewMode, setViewMode] = useState("pending");
@@ -83,9 +82,6 @@ const AdminPage = ({ arr, setSelectedValue, selectedValue }) => {
         </div>
       )}
     </div>
-    // <div className="p-4">
-    //   <LeaveCalendar />
-    // </div>
   );
 };
 

@@ -58,6 +58,13 @@ const init = async () => {
         console.error("Failed to update leave balances:", error);
       }
     });
+    cron.schedule("0 0 1 1 *", async () => {
+      try {
+        await updateLeaveBalances(true);
+      } catch (error) {
+        console.log("Failed to update leave balances yearly:", error);
+      }
+    });
 
     server.route(Route);
     await server.start();

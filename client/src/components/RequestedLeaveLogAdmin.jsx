@@ -2,6 +2,7 @@ import React from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { useState, useEffect } from "react";
+import API from "../utils/API";
 
 const RequestedLeaveLogAdmin = () => {
   const [leaveRequests, setLeaveRequests] = useState([]);
@@ -17,7 +18,7 @@ const RequestedLeaveLogAdmin = () => {
     try {
       setLoading(true);
       const response = await axios.get(
-        `http://localhost:3000/leave-request-history/${id}`,
+        `${API.BASE_URL}${API.LEAVE_REQUEST_HISTORY_TO_MANAGER}/${id}`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("Token")}`,

@@ -4,8 +4,8 @@ import { RxDashboard } from "react-icons/rx";
 import { LuFileText } from "react-icons/lu";
 import { IoIosLogOut } from "react-icons/io";
 import { FcApproval } from "react-icons/fc";
-import { IoIosPeople } from "react-icons/io";
 import { FaUsers, FaCalendarAlt } from "react-icons/fa";
+import { IoIosPersonAdd } from "react-icons/io";
 
 const MemberNavBar = ({ arr, selectedValue, setSelectedValue, setToken }) => {
   const employee = JSON.parse(localStorage.getItem("Employee"));
@@ -18,7 +18,7 @@ const MemberNavBar = ({ arr, selectedValue, setSelectedValue, setToken }) => {
     } else if (label === "Approve Leave") {
       return <FcApproval size={24} className="text-[#D7AB19] pr-2" />;
     } else if (label === "Add People") {
-      return <IoIosPeople size={24} className="text-[#D7AB19] pr-2" />;
+      return <IoIosPersonAdd size={24} className="text-[#D7AB19] pr-2" />;
     } else if (label === "Employee") {
       return <FaUsers size={24} className="text-[#D7AB19] pr-2" />;
     } else if (label === "Calendar") {

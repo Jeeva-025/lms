@@ -14,13 +14,12 @@ import {
 import {
   FaUser,
   FaBriefcase,
-  FaCalendarAlt,
   FaRegCheckCircle,
   FaRegTimesCircle,
 } from "react-icons/fa";
 import { useEffect } from "react";
 import axios from "axios";
-import { Player } from "@lottiefiles/react-lottie-player";
+import API from "../utils/API";
 
 const bgColors = [
   "bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200",
@@ -63,7 +62,7 @@ const LeaveApproval = () => {
     console.log(data.id);
     try {
       const response = await axios.patch(
-        "http://localhost:3000/approval-of-leave",
+        `${API.BASE_URL}${API.LEAVE_APPROVAL}`,
         {
           id: data.approvalFlowId,
         },
@@ -83,9 +82,17 @@ const LeaveApproval = () => {
 
   const handleReject = async (data) => {
     try {
+      console.log(data);
+      console.log({
+        id: data.id,
+        approver_id: data.employeeId,
+      });
       const response = await axios.patch(
-        `http://localhost:3000/rejectLeave/${data.approvalFlowId}`,
-        {},
+        `${API.BASE_URL}${API.REJECT_LEAVE_REQUEST}`,
+        {
+          id: data.id,
+          approver_id: data.employeeId,
+        },
         {
           headers: {
             "Content-Type": "application/json",
@@ -93,6 +100,7 @@ const LeaveApproval = () => {
           },
         }
       );
+      console.log(response);
 
       setCount(count + 1);
     } catch (err) {
@@ -105,7 +113,7 @@ const LeaveApproval = () => {
     try {
       const employeeId = JSON.parse(localStorage.getItem("Employee")).id;
       const response = await axios.get(
-        `http://localhost:3000/all-requestedLeave-for-approval?id=${employeeId}`,
+        `${API.BASE_URL}${API.REQUESTED_LEAVE_TO_MANAGER}?id=${employeeId}`,
         {
           headers: {
             "Content-Type": "application/json",

@@ -45,7 +45,7 @@ const DeleteEmployee = ({ employee, onClose, onConfirm }) => {
               Cancel
             </button>
             <button
-              onClick={() => onConfirm(employee.employee_id)}
+              onClick={() => onConfirm(employee.id)}
               className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
             >
               Delete Employee

@@ -12,6 +12,7 @@ import {
   MdEventAvailable,
 } from "react-icons/md";
 import { BsCalendar2CheckFill } from "react-icons/bs";
+import API from "../utils/API";
 const LeaveDetailsCards = () => {
   const [leaveRemData, setLeaveRemData] = useState({
     availableLeave: 0,
@@ -27,7 +28,7 @@ const LeaveDetailsCards = () => {
     try {
       const employeeId = JSON.parse(localStorage.getItem("Employee")).id;
       const response = await axios.get(
-        `http://localhost:3000/employee-leave/${employeeId}`,
+        `${API.BASE_URL}${API.EMPLOYEE_REM_LEAVE}/${employeeId}`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("Token")}`,
@@ -35,33 +36,6 @@ const LeaveDetailsCards = () => {
           },
         }
       );
-      console.log(response);
-      // const response1 = await axios.post(
-      //   "http://localhost:3000/employee/noof/requestbystatus",
-      //   {
-      //     employee_id: JSON.parse(localStorage.getItem("Employee")).id,
-      //     approval_status: "PENDING",
-      //   },
-      //   {
-      //     headers: {
-      //       Authorization: `Bearer ${localStorage.getItem("Token")}`,
-      //       "Content-Type": "application/json",
-      //     },
-      //   }
-      // );
-      // const response2 = await axios.post(
-      //   "http://localhost:3000/employee/noof/requestbystatus",
-      //   {
-      //     employee_id: JSON.parse(localStorage.getItem("Employee")).id,
-      //     approval_status: "REJECTED",
-      //   },
-      //   {
-      //     headers: {
-      //       Authorization: `Bearer ${localStorage.getItem("Token")}`,
-      //       "Content-Type": "application/json",
-      //     },
-      //   }
-      // );
 
       setLeaveRemData((prev) => ({
         ...prev,

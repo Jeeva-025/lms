@@ -7,16 +7,14 @@ import { useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { useEffect } from "react";
+import { FaBriefcase, FaCoffee, FaVirus } from "react-icons/fa";
+import API from "../utils/API";
 import {
-  FaBriefcase,
-  FaCoffee,
-  FaVirus,
+  FaRegCalendarCheck,
   FaCalendarAlt,
   FaChevronDown,
-  FaRegCalendarCheck,
 } from "react-icons/fa";
 import { FiSend } from "react-icons/fi";
-
 const LeaveRequest = () => {
   const token = localStorage.getItem("Token");
 
@@ -27,6 +25,7 @@ const LeaveRequest = () => {
   const [selectedLeaveType, setSelectedLeaveType] = useState({});
   const [leaveType, setLeaveType] = useState([]);
   const [leaveReason, setLeaveReason] = useState("");
+  const [disabledDates, setDisabledDates] = useState([]);
 
   const colors = {
     primary: "#2C6975",
@@ -36,6 +35,23 @@ const LeaveRequest = () => {
     text: "#333333",
     lightText: "#777777",
     border: "#E0D6C9",
+  };
+
+  const getDisabledDates = (leaves) => {
+    const disabledDates = [];
+
+    leaves.forEach(({ startDate, endDate }) => {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      let current = new Date(start);
+
+      while (current <= end) {
+        disabledDates.push(new Date(current));
+        current.setDate(current.getDate() + 1);
+      }
+    });
+
+    return disabledDates;
   };
 
   const getIcon = (label) => {
@@ -69,7 +85,7 @@ const LeaveRequest = () => {
 
   const fetchAllLeaveType = async () => {
     try {
-      const response = await axios.get("http://localhost:3000/all-leave", {
+      const response = await axios.get(`${API.BASE_URL}${API.ALL_LEAVE_TYPE}`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -101,42 +117,99 @@ const LeaveRequest = () => {
       });
       return;
     }
-    const response = await axios.post(
-      "http://localhost:3000/leave-request-create",
-      {
-        leave_id: selectedLeaveType.id,
-        employee_id: JSON.parse(localStorage.getItem("Employee")).id,
-        reason: leaveReason,
-        start_date: startDate,
-        end_date: endDate,
-        manager_id: JSON.parse(localStorage.getItem("Employee")).managerId,
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
 
-    setEndDate(null);
-    setStartDate(null);
-    setLeaveReason("");
-    setSelectedLeaveType("");
-    toast.success("Leave request submitted successfully!");
+    try {
+      const response = await axios.post(
+        `${API.BASE_URL}${API.CREATE_REQUEST_LEAVE}`,
+        {
+          leave_id: selectedLeaveType.id,
+          employee_id: JSON.parse(localStorage.getItem("Employee")).id,
+          reason: leaveReason,
+          start_date: startDate,
+          end_date: endDate,
+          manager_id: JSON.parse(localStorage.getItem("Employee")).managerId,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      setEndDate(null);
+      setStartDate(null);
+      setLeaveReason("");
+      setSelectedLeaveType("");
+      toast.success("Leave request submitted successfully!", {
+        position: "top-center",
+        autoClose: 2000,
+      });
+    } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        "Something went wrong while submitting your request";
+
+      toast.error(message, {
+        position: "top-center",
+        autoClose: 3000,
+      });
+      setEndDate(null);
+      setStartDate(null);
+      setLeaveReason("");
+      setSelectedLeaveType("");
+    }
   };
+
+  const fetchAllLeaveApprovedDate = async () => {
+    const employeeId = JSON.parse(localStorage.getItem("Employee")).id;
+    try {
+      const response = await axios.get(
+        `${API.BASE_URL}${API.PREVIOUS_APPROVED_LEAVE_DATE}/${employeeId}`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const { data } = await axios.get(
+        `${API.BASE_URL}${API.ALL_GOVERNMENT_HOLIDAYS}`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const holidayDates = data.map((each) => new Date(each));
+      const leaveDates = getDisabledDates(response?.data);
+
+      setDisabledDates([...leaveDates, ...holidayDates]);
+    } catch (err) {
+      console.log(err);
+    }
+  };
+  console.log(disabledDates);
 
   useEffect(() => {
     fetchAllLeaveType();
+    fetchAllLeaveApprovedDate();
   }, []);
 
   return (
     <div
       className="flex items-start justify-start min-h-screen w-2/4 h-screen"
-      style={{ backgroundColor: colors.background }}
+      style={{
+        backgroundColor: colors.background,
+        transform: "scale(0.95)",
+        transformOrigin: "top left",
+      }}
     >
       <div
-        className="w-full max-w-2xl rounded-2xl overflow-auto custom-scrollbar shadow-lg h-[90vh]"
+        className="w-full max-w-2xl rounded-2xl overflow-auto custom-scrollbar shadow-lg h-screen"
         style={{
           backgroundColor: "white",
           border: `1px solid ${colors.border}`,
@@ -211,8 +284,14 @@ const LeaveRequest = () => {
                   const today = new Date();
                   today.setHours(0, 0, 0, 0);
                   const isPastDate = date < today;
-
-                  return isWeekend || isPastDate;
+                  const isDisabledDate = disabledDates.some((disabledDate) => {
+                    return (
+                      date.getFullYear() === disabledDate.getFullYear() &&
+                      date.getMonth() === disabledDate.getMonth() &&
+                      date.getDate() === disabledDate.getDate()
+                    );
+                  });
+                  return isWeekend || isPastDate || isDisabledDate;
                 }}
               />
             </div>
@@ -226,13 +305,14 @@ const LeaveRequest = () => {
               >
                 From Date
               </label>
-              <div className="relative">
+              <div className="relative" onClick={() => setShowDropDown(false)}>
                 <DatePicker
                   selected={startDate}
                   onChange={(date) => setStartDate(date)}
                   selectsStart
                   startDate={startDate}
                   endDate={endDate}
+                  excludeDates={disabledDates}
                   className="w-full pl-10 pr-4 py-2 rounded-lg focus:outline-none"
                   placeholderText="Select start date"
                   style={{
@@ -272,6 +352,7 @@ const LeaveRequest = () => {
                   startDate={startDate}
                   endDate={endDate}
                   minDate={startDate}
+                  excludeDates={disabledDates}
                   className="w-full pl-10 pr-4 py-2 rounded-lg focus:outline-none"
                   placeholderText="Select end date"
                   style={{
@@ -378,10 +459,16 @@ const LeaveRequest = () => {
           <div className="pt-4">
             <button
               onClick={handleSubmit}
-              className="w-full py-3 rounded-lg font-medium flex items-center justify-center space-x-2 transition-all"
+              className={` w-full py-3 rounded-lg font-medium flex items-center justify-center space-x-2 transition-all ${
+                leaveReason && leaveType && startDate && endDate
+                  ? "cursor-pointer"
+                  : "cursor-not-allowed"
+              }`}
               style={{
                 backgroundColor: colors.primary,
                 color: "white",
+                opacity:
+                  startDate && endDate && leaveReason && leaveType ? 1 : 0.8,
                 boxShadow: `0 4px 6px ${colors.primary}20`,
               }}
             >
