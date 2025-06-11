@@ -17,6 +17,7 @@ const API = {
 
   //LeaveCard Details
   EMPLOYEE_REM_LEAVE: "/employee-leave",
+  NO_OF_LEAVE_REQUEST_BY_STATUS: "/count-leave-request-by-approval",
 
   //LeaveCalendar.jsx
   TEAM_MEMBERS_LEAVE: "/team-members-leave",

@@ -1,5 +1,6 @@
 const Joi = require("joi");
 const { approvalStatus } = require("../utils/constant");
+const { employeeId } = require("./employeeValidation");
 
 const validate = {};
 validate.validateLeaveRequest = Joi.object({
@@ -28,6 +29,11 @@ validate.validateId = Joi.object({
 validate.rejectRequest = Joi.object({
   id: Joi.number().required(),
   approver_id: Joi.number().required(),
+});
+
+validate.noOfLeaveRequestByStatus = Joi.object({
+  employee_id: Joi.number().required(),
+  approval_status: Joi.string().required(),
 });
 
 module.exports = validate;

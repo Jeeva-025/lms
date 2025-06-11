@@ -34,9 +34,14 @@ const LeaveCalendar = () => {
   ];
 
   const employeeColors = {};
+  let colorIndex = 0;
   leaves.forEach((request, index) => {
     if (!employeeColors[request.name]) {
-      const hue = (index * 137.508) % 360;
+      let hue;
+      do {
+        hue = (colorIndex * 137.508) % 360;
+        colorIndex++;
+      } while ((hue >= 40 && hue <= 80) || (hue >= 250 && hue <= 290));
       employeeColors[request.name] = `hsl(${hue}, 70%, 60%)`;
     }
   });
@@ -102,7 +107,7 @@ const LeaveCalendar = () => {
     const employee = JSON.parse(localStorage.getItem("Employee"));
     try {
       const response = await axios.get(
-        `${API.BASE_URL}${API.TEAM_MEMBERS_LEAVE}/${employee.managerId}`,
+        `${API.BASE_URL}${API.TEAM_MEMBERS_LEAVE}/${employee.id}`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("Token")}`,
@@ -190,6 +195,7 @@ const LeaveCalendar = () => {
             </span>
             {holiday && (
               <FiStar
+                size={14}
                 className={`ml-1 text-xs ${
                   holiday.is_floater ? "text-yellow-500" : "text-purple-500"
                 }`}

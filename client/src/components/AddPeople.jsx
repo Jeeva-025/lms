@@ -9,6 +9,7 @@ const AddPeople = () => {
   const [manager, setManager] = useState([]);
   const [showPassword, setShowPassword] = useState(false);
   const [selectManager, setSelectedManager] = useState("");
+  const [selectDesignation, setSelectedDesignation] = useState("");
   const [showDropDown, setShowDropDown] = useState({
     manager: false,
     designation: false,
@@ -146,12 +147,38 @@ const AddPeople = () => {
   useEffect(() => {
     fetchData();
   }, []);
+  // useEffect(() => {
+  //   if (manager.length)
+  //     setManagerDropDown(
+  //       manager.filter((each) => each.employeeId !== data?.manager?.employeeId)
+  //     );
+  // }, [selectManager]);
+
   useEffect(() => {
-    if (manager.length)
+    setData((prev) => ({ ...prev, manager: null }));
+
+    const designation = selectDesignation.trim().toLowerCase();
+
+    if (!Array.isArray(manager)) return;
+
+    if (designation.includes("senior")) {
       setManagerDropDown(
-        manager.filter((each) => each.employeeId !== data?.manager?.employeeId)
+        manager.filter((each) => each.designation.toLowerCase().includes("hr"))
       );
-  }, [selectManager]);
+    } else if (designation.includes("hr")) {
+      setManagerDropDown(
+        manager.filter((each) =>
+          each.designation.toLowerCase().includes("director")
+        )
+      );
+    } else {
+      setManagerDropDown(
+        manager.filter((each) =>
+          each.designation.toLowerCase().includes("senior")
+        )
+      );
+    }
+  }, [selectDesignation]);
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-gray-100 p-4">
@@ -199,12 +226,12 @@ const AddPeople = () => {
               </label>
               <div
                 className="w-full px-4 py-2 border border-gray-200 rounded-lg cursor-pointer flex justify-between items-center bg-gray-50 hover:bg-white transition-all"
-                onClick={() =>
+                onClick={() => {
                   setShowDropDown((prev) => ({
                     manager: false,
                     designation: !showDropDown.designation,
-                  }))
-                }
+                  }));
+                }}
               >
                 <span
                   className={
@@ -243,6 +270,7 @@ const AddPeople = () => {
                           : "border-b border-gray-100"
                       }`}
                       onClick={() => {
+                        setSelectedDesignation(designation.name);
                         setData((prev) => ({
                           ...prev,
                           designation: designation,

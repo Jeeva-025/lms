@@ -2,10 +2,7 @@ const { AppDataSource } = require("../models/dbconfig");
 const Employee = require("../models/entities/employee");
 const LeavePolicy = require("../models/entities/leavePolicy");
 const LeaveBalance = require("../models/entities/leaveBalance");
-const status = {
-  Active: "200",
-  Inactive: "400",
-};
+const { status, typeOfLeave } = require("../utils/constant");
 
 async function updateLeaveBalances(isNewYear = false) {
   if (!AppDataSource.isInitialized) {
@@ -15,7 +12,7 @@ async function updateLeaveBalances(isNewYear = false) {
   try {
     const employeeRepo = AppDataSource.getRepository(Employee);
     const employees = await employeeRepo.find({
-      where: { status: status.Active },
+      where: { status: status.Active.toString() },
       relations: ["employeeType"],
     });
     const today = new Date();
@@ -50,7 +47,7 @@ async function updateEmployeeLeaveBalances(
   const policies = await leavePolicyRepo.find({
     where: {
       employee_type_id: employee.emp_type_id,
-      status: status.Active,
+      status: status.Active.toString(),
     },
   });
 
@@ -61,8 +58,9 @@ async function updateEmployeeLeaveBalances(
         leave_type_id: policy.leave_type_id,
         year: year,
       },
+      relations: ["leaveType"],
     });
-
+    console.log(balance.leaveType.name);
     if (!balance) {
       balance = leaveBalanceRepo.create({
         employee_id: employee.id,
@@ -83,9 +81,12 @@ async function updateEmployeeLeaveBalances(
           leave_type_id: policy.leave_type_id,
           year: year - 1,
         },
+        relations: ["leaveType"],
       });
       if (
         previousYearBalance &&
+        previousYearBalance.leaveType.name.trim().toLowerCase() ===
+          typeOfLeave.earned.trim().toLowerCase() &&
         previousYearBalance.total_leaves > previousYearBalance.no_of_leave_taken
       ) {
         const unusedLeaves =

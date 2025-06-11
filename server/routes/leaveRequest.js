@@ -121,6 +121,19 @@ const leaveRequestRoutes = [
       },
     },
   },
+  {
+    method: "GET",
+    path: "/count-leave-request-by-approval",
+    options: {
+      handler: leaveRequestController.noOfRequestByApprovalStatus,
+      validate: {
+        query: leaveRequestValidation.noOfLeaveRequestByStatus,
+        failAction: (request, h, err) => {
+          return h.response({ message: err.message }).code(400).takeover();
+        },
+      },
+    },
+  },
 ];
 
 module.exports = leaveRequestRoutes;

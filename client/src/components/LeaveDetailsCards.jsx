@@ -2,7 +2,6 @@ import React from "react";
 import { FaRegCircleCheck } from "react-icons/fa6";
 import { FaClockRotateLeft } from "react-icons/fa6";
 import { IoCloseCircleOutline } from "react-icons/io5";
-import { FaUser } from "react-icons/fa";
 import { toast } from "react-toastify";
 import axios from "axios";
 import { useState, useEffect } from "react";
@@ -13,6 +12,7 @@ import {
 } from "react-icons/md";
 import { BsCalendar2CheckFill } from "react-icons/bs";
 import API from "../utils/API";
+import { approvalStatus } from "../utils/constant";
 const LeaveDetailsCards = () => {
   const [leaveRemData, setLeaveRemData] = useState({
     availableLeave: 0,
@@ -27,22 +27,41 @@ const LeaveDetailsCards = () => {
   const fetchReaminingLeave = async () => {
     try {
       const employeeId = JSON.parse(localStorage.getItem("Employee")).id;
+      const headers = {
+        Authorization: `Bearer ${localStorage.getItem("Token")}`,
+        "Content-Type": "application/json",
+      };
+
       const response = await axios.get(
         `${API.BASE_URL}${API.EMPLOYEE_REM_LEAVE}/${employeeId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("Token")}`,
-            "Content-Type": "application/json",
-          },
-        }
+        { headers }
+      );
+
+      const statusCount = {
+        approved: 0,
+        rejected: 0,
+        pending: 0,
+        cancelled: 0,
+      };
+
+      await Promise.all(
+        Object.entries(approvalStatus).map(async ([key]) => {
+          const res = await axios.get(
+            `${API.BASE_URL}${API.NO_OF_LEAVE_REQUEST_BY_STATUS}?employee_id=${employeeId}&approval_status=${key}`,
+            { headers }
+          );
+
+          const countKey = key.toLowerCase();
+          statusCount[countKey] = Object.values(res.data)[0];
+        })
       );
 
       setLeaveRemData((prev) => ({
         ...prev,
         availableLeave: response?.data?.data?.availableLeave,
-        approved: 0,
-        pending: 0,
-        rejected: 0,
+        approved: statusCount.approved,
+        pending: statusCount.pending,
+        rejected: statusCount.rejected,
         availableCasual: response?.data?.data?.casualLeaveAvailable,
         availableEarned: response?.data?.data?.earnedLeaveAvailable,
         availableSick: response?.data?.data?.sickLeaveAvailable,
@@ -60,15 +79,11 @@ const LeaveDetailsCards = () => {
       });
     }
   };
+
   useEffect(() => {
     fetchReaminingLeave();
   }, []);
-  useEffect(() => {
-    if (leaveRemData.availableLeave > 0) {
-      console.log(leaveRemData);
-    }
-  }, [leaveRemData]);
-  console.log(leaveRemData);
+
   return (
     <div className="flex space-x-4 h-auto items-center px-2 w-full overflow-auto no-scrollbar py-2">
       {/* Available Leaves */}

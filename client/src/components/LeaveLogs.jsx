@@ -302,12 +302,6 @@ const LeaveLogs = () => {
             </table>
           </div>
 
-          {filteredData.length === 0 && (
-            <div className="py-12 text-center">
-              <p className="text-gray-500">No leave records found</p>
-            </div>
-          )}
-
           {showFilter && (
             <div className="fixed inset-0 bg-black/30 flex items-center justify-end z-50 backdrop-blur-sm">
               <Filter

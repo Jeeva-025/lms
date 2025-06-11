@@ -42,7 +42,7 @@ function App() {
     } else if (toLowerTrim(emp?.designation)?.includes("senior")) {
       arr = ["Dashboard", "Approve Leave", "Request Leave", "Calendar"];
     } else {
-      arr = ["Dashboard", "Approve Leave"];
+      arr = ["Dashboard", "Approve Leave", "Request Leave", "Calendar"];
     }
   }
 

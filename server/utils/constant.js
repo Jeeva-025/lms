@@ -8,4 +8,9 @@ const approvalStatus = {
   Pending: 2,
   Cancelled: 3,
 };
-module.exports = { status, approvalStatus };
+const typeOfLeave = {
+  earned: "Earned Leave",
+  casual: "Casual Leave",
+  sick: "Sick Leave",
+};
+module.exports = { status, approvalStatus, typeOfLeave };

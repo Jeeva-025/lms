@@ -50,7 +50,6 @@ const init = async () => {
     server.auth.default("jwt auth");
 
     cron.schedule("1 0 1 * *", async () => {
-      console.log("Running monthly leave balance update...");
       try {
         await updateLeaveBalances();
         console.log("Leave balances updated successfully");
